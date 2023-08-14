@@ -1,10 +1,9 @@
 import requests
 import pyftdi.serialext
 import datetime
-import json
 import configparser
-import os
 import threading
+import os
 import queue
 from pathlib import Path
 
@@ -21,9 +20,6 @@ def write_file():
     with open(configLocation, "w") as configfile:
         config.write(configfile)
 
-
-# Configuration setup
-config = configparser.ConfigParser()
 if not os.path.exists(configLocation):
     config["ServerConf"] = {
         "server_url": "https://example.com",
