@@ -13,9 +13,7 @@ This code is designed to read and process serial data from a specific device and
 
 To get started, you can clone this repository using the following command:
 
-    ```bash
     git clone https://github.com/simaanc/XBeeServerAPI.git
-    ```
 
 ## Installation
 
