@@ -9,19 +9,47 @@ This code is designed to read and process serial data from a specific device and
 
 ## Usage
 
-1. Install the required packages using the following command:
+1. Clone the Repository:
+
+To get started, you can clone this repository using the following command:
+
+    ```bash
+    git clone https://github.com/simaanc/XBeeServerAPI.git
+    ```
+
+## Installation
+
+1. Create a Virtual Environment (Recommended):
+
+    It's recommended to create a virtual environment to manage dependencies for this project. Navigate into the project directory and execute the following command:
+
+    ```bash
+    python -m venv ~
+    ```
+    Activate the virtual environment
+
+    # On Windows
+    venv\Scripts\activate
+
+    # On macOS and Linux
+    source venv/bin/activate
+
+2. Install the required packages using the following command:
 
     ```bash
     pip install -r requirements.txt
     ```
-2. Configure the configfile.ini:
+3. Configure the configfile.ini:
 
     Modify the configuration in the configfile.ini file to provide the necessary information:
 
-    server_url: The URL of the server to which JSON payloads will be sent.
-    api_key: Your API key for authorization on the server.
-    serial_port_url: The URL of the serial port to read data from (FTDI interface).
-    baud_rate: The baud rate for the serial communication.
+    `server_url`: The URL of the server to which JSON payloads will be sent.
+    
+    `api_key`: Your API key for authorization on the server.
+    
+    `serial_port_url`: The URL of the serial port to read data from (FTDI interface).
+    
+    `baud_rate`: The baud rate for the serial communication.
 
     Default Config:
 
@@ -32,7 +60,7 @@ This code is designed to read and process serial data from a specific device and
     serial_port_url = ftdi://ftdi:232:/1
     baud_rate = 115200
     ```
-3. Run the code:
+4. Run the code:
 
     Execute the script using the following command:
     ```bash
