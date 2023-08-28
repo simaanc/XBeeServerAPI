@@ -26,12 +26,15 @@ To get started, you can clone this repository using the following command:
     ```
     Activate the virtual environment
 
-    # On Windows
+    On Windows
+    ```bash
     venv\Scripts\activate
-
-    # On macOS and Linux
+    ```
+    
+    On macOS and Linux
+    ```bash
     source venv/bin/activate
-
+    ```
 2. Install the required packages using the following command:
 
     ```bash
