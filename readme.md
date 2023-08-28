@@ -24,7 +24,7 @@ This code is designed to read and process serial data from a specific device and
     baud_rate: The baud rate for the serial communication.
 
     Default Config:
-    
+
     ```ini
     [ServerConf]
     server_url = https://example.com
@@ -52,7 +52,9 @@ This code is designed to read and process serial data from a specific device and
 The JSON payload sent to the server consists of the following fields:
 
 `source_address_64`: The 64-bit source address from the received data.
+
 `date_time`: The timestamp when the data was received in ISO 8601 format (UTC).
+
 `data`: The processed data from the received packet, converted to ASCII.
 
 ```json
