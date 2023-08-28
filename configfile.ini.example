@@ -1,0 +1,5 @@
+[ServerConf]
+server_url = https://example.com
+api_key = your_api_key_here
+serial_port_url = ftdi://ftdi:232:/1
+baud_rate = 115200

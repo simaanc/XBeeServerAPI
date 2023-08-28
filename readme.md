@@ -22,7 +22,7 @@ To get started, you can clone this repository using the following command:
     It's recommended to create a virtual environment to manage dependencies for this project. Navigate into the project directory and execute the following command:
 
     ```bash
-    python -m venv ~
+    python -m venv .
     ```
     Activate the virtual environment
     
