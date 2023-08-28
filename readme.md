@@ -12,7 +12,7 @@ This code is designed to read and process serial data from a specific device and
 1. Install the required packages using the following command:
 
     ```bash
-    pip install requests pyftdi
+    pip install -r requirements.txt
     ```
 2. Configure the configfile.ini:
 
