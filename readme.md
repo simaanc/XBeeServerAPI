@@ -23,6 +23,15 @@ This code is designed to read and process serial data from a specific device and
     serial_port_url: The URL of the serial port to read data from (FTDI interface).
     baud_rate: The baud rate for the serial communication.
 
+    Default Config:
+    
+    ```ini
+    [ServerConf]
+    server_url = https://example.com
+    api_key = your_api_key_here
+    serial_port_url = ftdi://ftdi:232:/1
+    baud_rate = 115200
+    ```
 3. Run the code:
 
     Execute the script using the following command:
