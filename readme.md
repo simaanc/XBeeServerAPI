@@ -25,15 +25,10 @@ To get started, you can clone this repository using the following command:
     python -m venv ~
     ```
     Activate the virtual environment
-
-    On Windows
-    ```bash
-    venv\Scripts\activate
-    ```
     
     On macOS and Linux
     ```bash
-    source venv/bin/activate
+    source bin/activate
     ```
 2. Install the required packages using the following command:
 
