@@ -54,7 +54,7 @@ def serial_reader():
     while True:
         try:
             # Read incoming data
-            new_data = port.read(6)  # Adjust the read size as needed
+            new_data = port.read(6)
 
             if not new_data:
                 continue
@@ -91,28 +91,23 @@ def serial_reader():
 
                 # Extract the frame type (4th byte)
                 frame_type = complete_packet[3]
-                # print("Frame Type:", hex(frame_type))
 
                 # Extract the 64-bit source address (next 8 bytes)
                 source_address_64 = complete_packet[4:12]
-                # print("Source Address (64-bit):", source_address_64.hex())
 
                 # Extract the 16-bit source network address (next 2 bytes)
                 source_address_16 = complete_packet[12:14]
-                # print("Source Address (16-bit):", source_address_16.hex())
 
                 # Extract the receive options (next 1 byte)
                 receive_options = complete_packet[14]
-                # print("Receive Options:", hex(receive_options))
 
                 # Calculate the number of bytes for the received data
                 received_data_length = (
                     packet_length - 12
-                )  # Subtracting 8 bytes for address, 2 bytes for network address, and 1 byte for options
-
+                )
+                
                 # Extract the received data
                 received_data = complete_packet[15 : 15 + received_data_length]
-                # print("Received Data (Hex):", received_data.hex())
 
                 # Convert received data from hex to ASCII
                 received_data_ascii = bytes.fromhex(received_data.hex()).decode(
@@ -121,7 +116,6 @@ def serial_reader():
                 received_data_ascii = "".join(
                     char for char in received_data_ascii if char.isascii()
                 )
-                # print("Received Data (ASCII):", received_data_ascii)
 
                 # Validate the checksum
                 received_packet = complete_packet[3:]  # Exclude the start delimiter
@@ -137,14 +131,15 @@ def serial_reader():
                     print("Received Packet 90:", complete_packet.hex())
 
                     current_time = datetime.datetime.now(datetime.timezone.utc)
-                    date_time_str = current_time.isoformat()
+                    epoch_time = round(current_time.timestamp(), 3)
 
                     # Construct JSON payload
                     payload = {
                         "source_address_64": str(source_address_64.hex()).upper(),
-                        "date_time": date_time_str,
+                        "date_time": epoch_time,
                         "data": received_data_ascii,
                     }
+                    
                     print(payload)
                     # Put the JSON payload in a queue to be processed outside this loop
                     json_payload_queue.put(payload)
@@ -152,8 +147,6 @@ def serial_reader():
                     print("Received Packet 95:", complete_packet.hex())
                 else:
                     print("Unknown frame type:", hex(frame_type))
-
-                print("\n\n")
 
         except Exception as e:
             print("Exception in serial_reader:", e)
