@@ -77,14 +77,14 @@ The JSON payload sent to the server consists of the following fields:
 
 `source_address_64`: The 64-bit source address from the received data.
 
-`date_time`: The timestamp when the data was received in ISO 8601 format (UTC).
+`date_time`: The timestamp when the data was received in EPOCH (MS Precision).
 
 `data`: The processed data from the received packet, converted to ASCII.
 
 ```json
 {
   "source_address_64": "0013A20040A12345",
-  "date_time": "1694466304.685",
+  "date_time": "1694467656480",
   "data": "Hello, World!"
 }
 ```

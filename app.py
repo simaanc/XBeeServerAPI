@@ -136,7 +136,7 @@ def serial_reader():
                     # Construct JSON payload
                     payload = {
                         "source_address_64": str(source_address_64.hex()).upper(),
-                        "date_time": epoch_time,
+                        "date_time": epoch_time * 1000,
                         "data": received_data_ascii,
                     }
                     
