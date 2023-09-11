@@ -84,7 +84,7 @@ The JSON payload sent to the server consists of the following fields:
 ```json
 {
   "source_address_64": "0013A20040A12345",
-  "date_time": "2023-08-28T12:34:56.789012Z",
+  "date_time": "1694466304.685",
   "data": "Hello, World!"
 }
 ```
