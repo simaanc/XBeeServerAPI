@@ -88,3 +88,10 @@ The JSON payload sent to the server consists of the following fields:
   "data": "Hello, World!"
 }
 ```
+
+## Internal Box Information
+
+1. XBee Sensor code stored in "SensorCode" directory
+2. Linux Box at Randolph office available at: 10.10.6.66 (sensorhub1.telaeris.com)
+    a. Running both testing server and sensor hub code
+3. Credentials (found in Dave's skype with Christopher)    

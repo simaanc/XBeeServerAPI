@@ -1,0 +1,1 @@
+This directory to store the Zigbee board information
