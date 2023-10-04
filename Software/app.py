@@ -7,11 +7,15 @@ import os
 import queue
 from pathlib import Path
 
+from flask import Flask, request, render_template, jsonify
+
 # Paths and configuration
 source_path = Path(__file__).resolve()
 source_dir = source_path.parent
 config = configparser.ConfigParser()
 configLocation = str(source_dir) + "/configfile.ini"
+
+app = Flask(__name__)
 
 # Open a serial port on the second FTDI device interface (IF/2) @ 115200 baud
 port = pyftdi.serialext.serial_for_url("ftdi://ftdi:232:/1", baudrate=115200)
@@ -131,12 +135,13 @@ def serial_reader():
                     print("Received Packet 90:", complete_packet.hex())
 
                     current_time = datetime.datetime.now(datetime.timezone.utc)
-                    epoch_time = round(current_time.timestamp(), 3)
-
+                    #epoch_time = round(current_time.timestamp(), 3) * 1000
+                    epoch_time = current_time.isoformat()
+                    
                     # Construct JSON payload
                     payload = {
                         "source_address_64": str(source_address_64.hex()).upper(),
-                        "date_time": epoch_time * 1000,
+                        "date_time": epoch_time,
                         "data": received_data_ascii,
                     }
                     
@@ -160,28 +165,92 @@ serial_thread = threading.Thread(target=serial_reader)
 serial_thread.daemon = True
 serial_thread.start()
 
-# Main loop to process JSON payloads and make POST requests
-while True:
-    try:
-        payload = json_payload_queue.get(timeout=1)  # Adjust the timeout as needed
-        json_payload_queue.task_done()
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        # Update the configuration with values from the form
+        config["ServerConf"]["server_url"] = request.form["server_url"]
+        config["ServerConf"]["api_key"] = request.form["api_key"]
+        write_file()  # Save the updated configuration to the file
+        return "Configuration updated successfully."
 
-        server_url = config["ServerConf"]["server_url"]
-        api_key = config["ServerConf"]["api_key"]
+    # Render the configuration form
+    return render_template(
+        "index.html",
+        server_url=config["ServerConf"]["server_url"],
+        api_key=config["ServerConf"]["api_key"],
+    )
+
+
+@app.route("/check_auth_connection", methods=["POST"])
+def check_auth_connection():
+    try:
+        # Get the JSON data from the request
+        data = request.get_json()
+
+        # Extract the server URL and API key
+        server_url = data.get("server_url")
+        api_key = data.get("api_key")
+
+        payload = {}  # Include the API key in the payload
 
         headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
         }
 
-        post_response = requests.post(server_url, json=payload, headers=headers)
+        # Check if both server URL and API key are provided
+        if server_url and api_key:
+            try:
+                # Make a POST request to the receive server's auth_check route
+                auth_check_url = server_url + "/api/v1/sensor-hubs/test-connection"
+                response = requests.post(auth_check_url, json=payload, headers=headers)
 
-        # Check status code for response received (success code - 200)
-        print("POST Status Code:", post_response.status_code)
-        print("POST Response Content:", post_response.content)
+                print("POST Status Code:", response.status_code)
 
-    except queue.Empty:
-        pass  # No new payloads to process
+                if response.status_code == 200:
+                    result = {"message": "Authorization and Connection are OK!"}
+                else:
+                    result = {"message": "Authorization or Connection failed."}
+            except requests.exceptions.RequestException as e:
+                # Handle exceptions raised by requests.post
+                result = {"message": "Authorization or Connection failed"}
+        else:
+            result = {"message": "Missing server URL or API key."}
+
+        return jsonify(result)
 
     except Exception as e:
-        print("Exception in main loop:", e)
+        return jsonify({"error": str(e)})
+
+if __name__ == '__main__':
+    # Create a thread for the Flask app
+    flask_thread = threading.Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 5001})
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # Main loop to process JSON payloads and make POST requests
+    while True:
+        try:
+            payload = json_payload_queue.get(timeout=1)
+            json_payload_queue.task_done()
+
+            server_url = config["ServerConf"]["server_url"] + "/api/v1/sensors"
+            api_key = config["ServerConf"]["api_key"]
+
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+
+            post_response = requests.post(server_url, json=payload, headers=headers)
+
+            # Check status code for response received (success code - 200)
+            print("POST Status Code:", post_response.status_code)
+            print("POST Response Content:", post_response.content)
+
+        except queue.Empty:
+            pass  # No new payloads to process
+
+        except Exception as e:
+            print("Exception in main loop:", e)

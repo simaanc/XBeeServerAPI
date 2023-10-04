@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Configuration Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f7f7f7;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center; /* Center content in the container */
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            width: 95%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        input[type="submit"], button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+
+        input[type="submit"]:hover, button:hover {
+            background-color: #0056b3;
+        }
+
+        button {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        p#checkResult {
+            margin-top: 10px;
+            font-weight: bold;
+            display: none; /* Hide by default */
+        }
+    </style>
+</head>
+<body>
+    <h1>Configuration Page</h1>
+    <div class="container">
+        <form method="POST">
+            <label for="server_url">Server URL:</label>
+            <input type="text" id="server_url" name="server_url" value="{{ server_url }}" required>
+            
+            <label for="api_key">API Key:</label>
+            <input type="text" id="api_key" name="api_key" value="{{ api_key }}" required>
+            
+            <!-- Use a button element instead of input type submit -->
+            <button type="submit">Save Config</button>
+        </form>
+
+        <!-- Add a button for checking authorization and connection -->
+        <button onclick="checkAuthorizationAndConnection()">Check Config</button>
+
+        <!-- Display the result of the authorization and connection check -->
+        <p id="checkResult">Authorization and connection successful!</p>
+    </div>
+
+    <script>
+        function checkAuthorizationAndConnection() {
+            // Get the server URL and API key from the form
+            const serverUrl = document.getElementById('server_url').value;
+            const apiKey = document.getElementById('api_key').value;
+
+            // Send a request to check authorization and connection
+            fetch('/check_auth_connection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ server_url: serverUrl, api_key: apiKey })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display the result of the check and center it
+                const resultElement = document.getElementById('checkResult');
+                resultElement.style.display = 'block';
+                resultElement.textContent = data.message;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
