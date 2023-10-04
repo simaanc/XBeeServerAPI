@@ -224,6 +224,9 @@ def check_auth_connection():
         return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
+
+    os.system("pkill python")
+
     # Create a thread for the Flask app
     flask_thread = threading.Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 5001})
     flask_thread.daemon = True
