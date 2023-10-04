@@ -1,6 +1,6 @@
-# Serial Data Processor
+# Serial Data Processor - Linux Server Sensor Hub Code
 
-This code is designed to read and process serial data from a specific device and send the processed data as JSON payloads to a server using POST requests.
+This code is designed to read and process serial data from an XBee serial device receiving data from multiple Zigbee sensors and send the processed data as a JSON payload to XPTrack server using POST requests.
 
 ## Prerequisites
 
