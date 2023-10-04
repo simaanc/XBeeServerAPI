@@ -225,7 +225,7 @@ def check_auth_connection():
 
 if __name__ == '__main__':
 
-    os.system("pkill python")
+    # Need to run this from a shell script >>> os.system("pkill python")
 
     # Create a thread for the Flask app
     flask_thread = threading.Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 5001})
