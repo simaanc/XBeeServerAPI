@@ -135,14 +135,14 @@ def serial_reader():
                     print("Received Packet 90:", complete_packet.hex())
 
                     current_time = datetime.datetime.now(datetime.timezone.utc)
-                    #epoch_time = round(current_time.timestamp(), 3) * 1000
-                    epoch_time = current_time.isoformat()
+                    epoch_time = round(current_time.timestamp(), 3) * 1000
+                    # epoch_time = current_time.isoformat()
                     
                     # Construct JSON payload
                     payload = {
                         "source_address_64": str(source_address_64.hex()).upper(),
                         "date_time": epoch_time,
-                        "data": received_data_ascii,
+                        "data": float(received_data_ascii),
                     }
                     
                     print(payload)
