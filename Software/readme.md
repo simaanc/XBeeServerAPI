@@ -27,7 +27,7 @@ This code is designed to read and process serial data from an XBee serial device
     chmod +x install.sh
     ```
 
-4. Run Script as Root:
+4. Run Script as Sudo:
 
     ```bash
     sudo ./install.sh
