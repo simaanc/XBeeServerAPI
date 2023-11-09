@@ -5,9 +5,9 @@ This code is designed to read and process serial data from an XBee serial device
 ## Prerequisites
 
 - Python 3.x
-- Required Python packages: `requests`, `pyftdi`
+- Required Python packages: `requests`, `pyftdi`, `flask`
 
-## Usage
+## Installation
 
 1. Clone the Repository:
 
@@ -15,57 +15,27 @@ This code is designed to read and process serial data from an XBee serial device
     ```bash
     git clone https://github.com/Telaeris/XBeeServerAPI.git
     ```
-## Installation
 
-1. Create a Virtual Environment (Recommended):
+2. Change Current Directory to Software:
+    ```bash
+    cd Software
+    ```
 
-    It's recommended to create a virtual environment to manage dependencies for this project. Navigate into the `Software` project directory and execute the following command:
+3. Allow script to run:
 
     ```bash
-    python -m venv .
+    chmod +x install.sh
     ```
-    Activate the virtual environment
-    
-    On macOS and Linux
-    ```bash
-    source bin/activate
-    ```
-2. Install the required packages using the following command:
+
+4. Run Script as Root:
 
     ```bash
-    pip install -r requirements.txt
-    ```
-3. Configure the configfile.ini:
-
-    Modify the configuration in the configfile.ini file to provide the necessary information:
-
-    `server_url`: The URL of the server to which JSON payloads will be sent.
-    
-    `api_key`: Your API key for authorization on the server.
-    
-    `serial_port_url`: The URL of the serial port to read data from (FTDI interface).
-    
-    `baud_rate`: The baud rate for the serial communication.
-
-    Default Config:
-
-    ```ini
-    [ServerConf]
-    server_url = https://example.com
-    api_key = your_api_key_here
-    serial_port_url = ftdi://ftdi:232:/1
-    baud_rate = 115200
-    ```
-4. Run the code:
-
-    Execute the script using the following command:
-    ```bash
-    python app.py
+    sudo ./install.sh
     ```
 
 ## Description
 
-1. The script reads data from the specified serial port using the pyftdi library.
+1. The app reads data from the specified serial port using the pyftdi library.
 2. It maintains a buffer to collect incoming data until it forms complete packets.
 3. Complete packets are processed according to a specific format and are converted to JSON payloads.
 4. The JSON payloads are then added to a thread-safe queue for processing.
