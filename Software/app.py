@@ -253,9 +253,6 @@ if __name__ == '__main__':
             # send the request with a timeout of 5 seconds
             post_response = requests.post(server_url, json=payload, headers=headers, timeout=5)
             
-            #check for error in the response
-            post_response.raise_for_status()
-            
             bounce_count = 0 #reset the bounce counter
 
             # Check status code for response received (success code - 200)
@@ -290,5 +287,3 @@ if __name__ == '__main__':
 
         except Exception as e:
             print("Exception in main loop:", e)
-            print("Halting the program...")
-            break

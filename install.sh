@@ -7,10 +7,10 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Define a logfile
-LOGFILE="/var/log/xbeeserver_install.log"
+# LOGFILE="/var/log/xbeeserver_install.log"
 
 # Redirect stdout and stderr to logfile
-exec 1>>$LOGFILE 2>&1
+# exec 1>>$LOGFILE 2>&1
 
 # Function to print error messages in red
 error_message() {
@@ -28,10 +28,10 @@ info_message() {
 }
 
 # Ensure the script is being run from the Software directory
-if [ ! -f "app.py" ]; then
-    error_message "Error: Please run this script from the Software directory where app.py is located."
-    exit 1
-fi
+# if [ ! -f "app.py" ]; then
+#     error_message "Error: Please run this script from the Software directory where app.py is located."
+#     exit 1
+# fi
 
 # Step 1: Update the system
 info_message "Updating the system..."
@@ -64,17 +64,17 @@ sudo usermod -a -G plugdev $USER || { error_message "Failed to add user to plugd
 
 # Step 4: Create and activate a virtual environment
 info_message "Creating a virtual environment for the XBee Server API..."
-python3 -m venv env || { error_message "Virtual environment creation failed, exiting."; exit 1; }
-source env/bin/activate
+python3 -m venv Software/env || { error_message "Virtual environment creation failed, exiting."; exit 1; }
+source Software/env/bin/activate
 
 # Step 5: Install the required Python packages including Flask
 info_message "Installing required Python packages including Flask..."
 pip install requests pyftdi flask || { error_message "Package installation failed, exiting."; exit 1; }
 
 # Step 6: Create a non-login user and group for the service (if not already existing)
-info_message "Creating a non-login user and group for the XBee Server API service..."
-sudo getent group xbeeserver_group >/dev/null || sudo groupadd xbeeserver_group
-sudo getent passwd xbeeserver_user >/dev/null || sudo useradd -r -s /bin/false -g xbeeserver_group xbeeserver_user
+# info_message "Creating a non-login user and group for the XBee Server API service..."
+# sudo getent group xbeeserver_group >/dev/null || sudo groupadd xbeeserver_group
+# sudo getent passwd xbeeserver_user >/dev/null || sudo useradd -r -s /bin/false -g xbeeserver_group xbeeserver_user
 
 # Step 7: Create a systemd service file for the XBee Server API
 info_message "Creating a systemd service file for the XBee Server API..."
@@ -85,12 +85,13 @@ Description=XBee Server API Service
 After=network.target
 
 [Service]
-ExecStart=$(pwd)/env/bin/python $(pwd)/app.py
+ExecStart=$(pwd)/Software/env/bin/python $(pwd)/Software/app.py
 Restart=on-failure
-User=xbeeserver_user
-Group=xbeeserver_group
-WorkingDirectory=$(pwd)
-Environment=PATH=$(pwd)/env/bin
+RestartSec=2
+StartLimitIntervalSec=0
+User=$USER
+WorkingDirectory=$(pwd)/Software/
+Environment=PATH=$(pwd)/Software/env/bin
 
 [Install]
 WantedBy=multi-user.target
