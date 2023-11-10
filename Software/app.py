@@ -231,10 +231,14 @@ if __name__ == '__main__':
     flask_thread = threading.Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 5001})
     flask_thread.daemon = True
     flask_thread.start()
+    
+    #track the number of times a request bounces back
+    bounce_count = 0
 
     # Main loop to process JSON payloads and make POST requests
     while True:
         try:
+            
             payload = json_payload_queue.get(timeout=1)
             json_payload_queue.task_done()
 
@@ -246,14 +250,45 @@ if __name__ == '__main__':
                 "Content-Type": "application/json",
             }
 
-            post_response = requests.post(server_url, json=payload, headers=headers)
+            # send the request with a timeout of 5 seconds
+            post_response = requests.post(server_url, json=payload, headers=headers, timeout=5)
+            
+            #check for error in the response
+            post_response.raise_for_status()
+            
+            bounce_count = 0 #reset the bounce counter
 
             # Check status code for response received (success code - 200)
             print("POST Status Code:", post_response.status_code)
             print("POST Response Content:", post_response.content)
+            
+        except requests.exceptions.Timeout:
+            bounce_count += 1
+            print("POST request timed out. Number of Tries:", bounce_count)
+            print('Trying again...')
+            while bounce_count < 6:
+                try:
+                    post_response = requests.post(server_url, json=payload, headers=headers, timeout=5)
+                    post_response.raise_for_status()
+                    print("POST Status Code:", post_response.status_code)
+                    print("POST Response Content:", post_response.content)
+                    bounce_count = 0
+                    break
+                except requests.exceptions.Timeout:
+                    bounce_count += 1
+                    print("POST request timed out. Number of Tries:", bounce_count)
+                    print('Trying again...')
+                except Exception as e:
+                    print("Exception in main loop:", e)
+            else:
+                bounce_count = 0
+                print('POST request failed after 5 tries. Trying Next Packet...')
+                continue
 
         except queue.Empty:
             pass  # No new payloads to process
 
         except Exception as e:
             print("Exception in main loop:", e)
+            print("Halting the program...")
+            break
