@@ -1,5 +1,7 @@
 # XBeeServerAPI
 
+For a guide on how to install this system onto a Raspberry PI, please refer to the [Installation Guide](/install.md)
+
 ## Overview
 
 Hub for all Zigbee Sensor Projects and Dev 
