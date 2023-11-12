@@ -5,6 +5,11 @@ install_dir="/opt"
 no_root_check=0  # Flag for bypassing root check
 silent_mode=0    # Flag for silent mode
 skip_ufw_ssh=0   # Flag for skipping UFW SSH rule
+service_name="xbeeserver.service"  # Service name
+
+# Determine the destination path for app.py based on install_dir
+app_destination="$install_dir/Software/app.py"  # Adjust this path as needed
+
 
 # Define colors for pretty output
 RED='\033[0;31m'
@@ -38,6 +43,26 @@ success_message() {
 # Function to print info messages in yellow
 info_message() {
     log_message "${YELLOW}INFO${NC}" "$1"
+}
+
+# Function to update app.py and restart the service
+update_app_and_restart_service() {
+    info_message "Stopping the service: $service_name..."
+    sudo systemctl stop "$service_name" || { error_message "Failed to stop $service_name"; exit 1; }
+
+    info_message "Updating app.py..."
+    if [ -f "$install_dir/Software/app.py" ]; then
+        sudo cp "$install_dir/Software/app.py" "$app_destination" || { error_message "Failed to update app.py."; exit 1; }
+    else
+        error_message "Updated app.py not found."
+        exit 1
+    fi
+
+    info_message "Restarting the service: $service_name..."
+    sudo systemctl start "$service_name" || { error_message "Failed to start $service_name"; exit 1; }
+
+    success_message "app.py updated and service restarted successfully."
+    exit 0
 }
 
 # Function to check for required commands and install UFW if not found
@@ -114,7 +139,7 @@ trap cleanup SIGINT SIGTERM
 check_dependencies
 
 # Parse command-line arguments
-while getopts ":d:nsf" opt; do
+while getopts ":d:nsfu" opt; do
   case $opt in
     d) install_dir="$OPTARG"
     ;;
@@ -124,10 +149,13 @@ while getopts ":d:nsf" opt; do
     ;;
     f) skip_ufw_ssh=1
     ;;
+    u) update_app_and_restart_service  # Call the update function
+    ;;
     \?) echo "Invalid option -$OPTARG" >&2; exit 1
     ;;
   esac
-done
+don
+
 
 
 # Root check
