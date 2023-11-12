@@ -122,7 +122,7 @@ while getopts ":d:nsu" opt; do
     ;;
     s) silent_mode=1
     ;;
-    u) skip_ufw_ssh=1
+    f) skip_ufw_ssh=1
     ;;
     \?) echo "Invalid option -$OPTARG" >&2; exit 1
     ;;
