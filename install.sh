@@ -4,6 +4,7 @@
 install_dir="/opt"
 no_root_check=0  # Flag for bypassing root check
 silent_mode=0    # Flag for silent mode
+skip_ufw_ssh=0   # Flag for skipping UFW SSH rule
 
 # Define colors for pretty output
 RED='\033[0;31m'
@@ -113,7 +114,7 @@ trap cleanup SIGINT SIGTERM
 check_dependencies
 
 # Parse command-line arguments
-while getopts ":d:ns" opt; do
+while getopts ":d:nsu" opt; do
   case $opt in
     d) install_dir="$OPTARG"
     ;;
@@ -121,10 +122,13 @@ while getopts ":d:ns" opt; do
     ;;
     s) silent_mode=1
     ;;
+    u) skip_ufw_ssh=1
+    ;;
     \?) echo "Invalid option -$OPTARG" >&2; exit 1
     ;;
   esac
 done
+
 
 # Root check
 if [ "$no_root_check" -eq 0 ] && [ "$(id -u)" != "0" ]; then
@@ -211,9 +215,16 @@ sudo systemctl daemon-reload || { error_message "Failed to reload systemd, exiti
 info_message "Enabling the XBee Server API service to start on boot..."
 sudo systemctl enable xbeeserver.service || { error_message "Failed to enable service, exiting."; exit 1; }
 
-# Firewall rule setup
+# Configure UFW
+if [ "$skip_ufw_ssh" -eq 0 ]; then
+    info_message "Configuring UFW - allowing SSH..."
+    sudo ufw allow ssh || { error_message "Failed to configure UFW for SSH, exiting."; exit 1; }
+fi
+
 info_message "Adding firewall rule for port 5001..."
 sudo ufw allow 5001/tcp || { error_message "Failed to update firewall, exiting."; exit 1; }
+
+info_message "Enabling UFW..."
 sudo ufw enable || { error_message "Failed to enable UFW, exiting."; exit 1; }
 
 # Starting the XBee Server API service
