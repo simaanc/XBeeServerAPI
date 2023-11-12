@@ -114,7 +114,7 @@ trap cleanup SIGINT SIGTERM
 check_dependencies
 
 # Parse command-line arguments
-while getopts ":d:nsu" opt; do
+while getopts ":d:nsf" opt; do
   case $opt in
     d) install_dir="$OPTARG"
     ;;
