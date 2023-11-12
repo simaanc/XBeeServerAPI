@@ -27,7 +27,12 @@ scp -r /path/to/XBeeServerAPI/ DEVICE_USER@DEVICE_NAME.local:/home/DEVICE_USER
 ssh DEVICE_USER@DEVICE_NAME.local
 ```
 
-8. Run the following command
+8. Allow script to run:
+```
+chmod +x ~/XBeeServerAPI/install.sh
+```
+
+9. Run the following command
 ```
 sudo bash ~/XBeeServerAPI/install.sh
 ```
@@ -35,3 +40,14 @@ sudo bash ~/XBeeServerAPI/install.sh
 ## This completes the installation of the XBeeServerAPI on the Raspberry Pi 4
 
 
+## Installing XBeeServerAPI with Optional Flags
+
+The `install.sh` script provides several optional flags to customize the installation process. Here are the available flags:
+
+- `-d DIRECTORY`: Use this flag to specify an installation directory other than the default.
+
+- `-n`: This flag allows you to skip root checks during installation. If you encounter issues related to root checks and want to bypass them.
+
+- `-s`: Enable silent mode by using this flag. Silent mode suppresses most of the installation prompts and messages, making the installation process less interactive.
+
+- `-f`: If you wish to skip enabling the UFW (Uncomplicated Firewall) for SSH during installation, you can use the `-f` flag. This can be useful if you have a different firewall setup or prefer to manage SSH access manually.

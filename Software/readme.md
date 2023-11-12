@@ -16,22 +16,19 @@ This code is designed to read and process serial data from an XBee serial device
     git clone https://github.com/Telaeris/XBeeServerAPI.git
     ```
 
-2. Change Current Directory to Software:
-    ```bash
-    cd Software
-    ```
+    For a guide on how to install this system onto a Raspberry PI, please refer to the [Installation Guide](/install.md)
 
-3. Allow script to run:
+## Installing XBeeServerAPI with Optional Flags
 
-    ```bash
-    chmod +x install.sh
-    ```
+The `install.sh` script provides several optional flags to customize the installation process. Here are the available flags:
 
-4. Run Script as Sudo:
+- `-d DIRECTORY`: Use this flag to specify an installation directory other than the default.
 
-    ```bash
-    sudo ./install.sh
-    ```
+- `-n`: This flag allows you to skip root checks during installation. If you encounter issues related to root checks and want to bypass them.
+
+- `-s`: Enable silent mode by using this flag. Silent mode suppresses most of the installation prompts and messages, making the installation process less interactive.
+
+- `-f`: If you wish to skip enabling the UFW (Uncomplicated Firewall) for SSH during installation, you can use the `-f` flag. This can be useful if you have a different firewall setup or prefer to manage SSH access manually.
 
 ## Description
 
