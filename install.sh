@@ -87,10 +87,10 @@ check_dependencies() {
         fi
     done
 
-    # Check for system packages
+    # Improved package checking
     local packages=("libusb-1.0-0" "python3-venv")
     for pkg in "${packages[@]}"; do
-        if ! dpkg -l | grep -qw "$pkg"; then
+        if ! dpkg-query -W -f='${Status}' $pkg 2>/dev/null | grep -q "install ok installed"; then
             error_message "Required package '$pkg' not installed. Please install it."
             exit 1
         fi
@@ -118,6 +118,15 @@ EOF" || { error_message "Failed to create udev rules, exiting."; exit 1; }
 }
 
 uninstall() {
+    # Confirmation before uninstalling
+    echo "You are about to uninstall the software. This action cannot be undone."
+    read -p "Are you sure you want to proceed? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        error_message "Uninstallation aborted by the user."
+        exit 1
+    fi
+
     echo "Starting uninstallation process..."
 
     # Stop the service
@@ -137,6 +146,15 @@ uninstall() {
 
     # Reload systemd daemon
     sudo systemctl daemon-reload
+
+    # Remove the specific UFW rule for port 5001 added by this script
+    echo "Reverting UFW rule for port 5001 added by the script..."
+    sudo ufw delete allow 5001/tcp || { error_message "Failed to remove UFW rule for port 5001, please check manually."; }
+
+    # Check if UFW is active and reload it
+    if sudo ufw status | grep -qw "active"; then
+        sudo ufw reload || { error_message "Failed to reload UFW, please check manually."; }
+    fi
 
     # Remove installation directory
     if [ -d "$install_dir/Software" ]; then
