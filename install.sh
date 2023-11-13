@@ -87,6 +87,15 @@ check_dependencies() {
         fi
     done
 
+    # Check for system packages
+    local packages=("libusb-1.0-0" "python3-venv")
+    for pkg in "${packages[@]}"; do
+        if ! dpkg -l | grep -qw "$pkg"; then
+            error_message "Required package '$pkg' not installed. Please install it."
+            exit 1
+        fi
+    done
+
     # Special handling for UFW
     if ! command -v ufw &> /dev/null; then
         info_message "UFW is not installed. Installing UFW..."
@@ -272,10 +281,6 @@ fi
 # System update
 info_message "Updating the system..."
 sudo apt-get update -y || { error_message "Updating failed, exiting."; exit 1; }
-
-# Dependencies installation
-info_message "Installing libusb-1.0 and Python3 virtualenv..."
-sudo apt-get install libusb-1.0-0 python3-venv -y || { error_message "Installation failed, exiting."; exit 1; }
 
 # Udev rules configuration
 info_message "Configuring udev rules for FTDI devices..."
