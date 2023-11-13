@@ -65,6 +65,18 @@ update_app_and_restart_service() {
     exit 0
 }
 
+show_usage() {
+    echo "Usage: $0 [OPTIONS]"
+    echo "Options:"
+    echo "  -d <dir>       Set the installation directory"
+    echo "  -n             Bypass root check"
+    echo "  -s             Silent mode"
+    echo "  -f             Skip UFW SSH rule"
+    echo "  -uninstall     Uninstall the software"
+    echo "Example:"
+    echo "  $0 -d /custom/dir -n -s"
+}
+
 # Function to check for required commands and install UFW if not found
 check_dependencies() {
     local dependencies=("python3" "pip" "systemctl" "cp" "mkdir")
@@ -94,6 +106,49 @@ configure_udev_rules() {
     SUBSYSTEM=='usb', ATTR{idVendor}=='0403', ATTR{idProduct}=='6015', GROUP='plugdev', MODE='0664'
     SUBSYSTEM=='usb', ATTR{idVendor}=='0403', ATTR{idProduct}=='6048', GROUP='plugdev', MODE='0664'
 EOF" || { error_message "Failed to create udev rules, exiting."; exit 1; }
+}
+
+uninstall() {
+    echo "Starting uninstallation process..."
+
+    # Stop the service
+    echo "Stopping the service: $service_name..."
+    sudo systemctl stop "$service_name" 2>/dev/null
+
+    # Disable the service
+    echo "Disabling the service: $service_name..."
+    sudo systemctl disable "$service_name" 2>/dev/null
+
+    # Remove the systemd service file
+    local SERVICE_FILE="/etc/systemd/system/$service_name"
+    if [ -f "$SERVICE_FILE" ]; then
+        echo "Removing the systemd service file..."
+        sudo rm "$SERVICE_FILE"
+    fi
+
+    # Reload systemd daemon
+    sudo systemctl daemon-reload
+
+    # Remove installation directory
+    if [ -d "$install_dir/Software" ]; then
+        echo "Removing installed software directory..."
+        sudo rm -rf "$install_dir/Software"
+    fi
+
+    # Remove log files
+    if [ -f "$LOGFILE" ]; then
+        echo "Removing installation log file..."
+        sudo rm "$LOGFILE"
+    fi
+
+    if [ -f "/var/log/XBeeServerAPI.log" ]; then
+        echo "Removing application log file..."
+        sudo rm "/var/log/XBeeServerAPI.log"
+    fi
+
+    # Add here any other cleanup tasks (e.g., UFW rule removal, udev rules cleanup)
+
+    echo "Uninstallation complete."
 }
 
 # Function to validate the installation path
@@ -139,22 +194,49 @@ trap cleanup SIGINT SIGTERM
 check_dependencies
 
 # Parse command-line arguments
-while getopts ":d:nsfu" opt; do
-  case $opt in
-    d) install_dir="$OPTARG"
-    ;;
-    n) no_root_check=1
-    ;;
-    s) silent_mode=1
-    ;;
-    f) skip_ufw_ssh=1
-    ;;
-    u) update_app_and_restart_service  # Call the update function
-    ;;
-    \?) echo "Invalid option -$OPTARG" >&2; exit 1
-    ;;
-  esac
-don
+if [ $# -eq 0 ]; then
+    show_usage
+    exit 1
+fi
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        -d)
+            install_dir="$2"
+            if [ -z "$install_dir" ]; then
+                echo "Error: -d requires an argument."
+                show_usage
+                exit 1
+            fi
+            shift 2
+            ;;
+        -n)
+            no_root_check=1
+            shift
+            ;;
+        -s)
+            silent_mode=1
+            shift
+            ;;
+        -f)
+            skip_ufw_ssh=1
+            shift
+            ;;
+        -uninstall)
+            uninstall  # Call the uninstall function
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
 
 
 
@@ -216,14 +298,16 @@ pip install requests pyftdi flask || { error_message "Package installation faile
 
 # Systemd service file creation
 info_message "Creating a systemd service file for the XBee Server API..."
-SERVICE_FILE="/etc/systemd/system/xbeeserver.service"
+APP_LOGFILE="/var/log/XBeeServerAPI.log"
+
+# Modify the systemd service file creation section
 cat <<EOF | sudo tee $SERVICE_FILE
 [Unit]
 Description=XBee Server API Service
 After=network.target
 
 [Service]
-ExecStart=$install_dir/Software/env/bin/python $install_dir/Software/app.py
+ExecStart=/bin/sh -c '$install_dir/Software/env/bin/python $install_dir/Software/app.py >> $APP_LOGFILE 2>&1'
 Restart=on-failure
 RestartSec=2
 StartLimitIntervalSec=0
@@ -234,6 +318,10 @@ Environment=PATH=$install_dir/Software/env/bin
 [Install]
 WantedBy=multi-user.target
 EOF
+
+# Ensure that the user has write permissions to the log file
+sudo touch $APP_LOGFILE
+sudo chown $USER $APP_LOGFILE
 
 # Systemd manager configuration reload
 info_message "Reloading the systemd manager configuration..."
