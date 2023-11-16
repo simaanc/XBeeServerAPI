@@ -6,6 +6,7 @@ no_root_check=0  # Flag for bypassing root check
 silent_mode=0    # Flag for silent mode
 skip_ufw_ssh=0   # Flag for skipping UFW SSH rule
 service_name="xbeeserver.service"  # Service name
+service_file="/etc/systemd/system/$service_name"
 
 # Determine the destination path for app.py based on install_dir
 app_destination="$install_dir/Software/app.py"  # Adjust this path as needed
@@ -300,7 +301,7 @@ info_message "Installing required Python packages including Flask..."
 pip install requests pyftdi flask || { error_message "Package installation failed, exiting."; exit 1; }
 
 # Modify the systemd service file creation section
-cat <<EOF | sudo tee $SERVICE_FILE
+cat <<EOF | sudo tee $service_file
 [Unit]
 Description=XBee Server API Service
 After=network.target
