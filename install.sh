@@ -10,16 +10,11 @@ service_name="xbeeserver.service"  # Service name
 # Determine the destination path for app.py based on install_dir
 app_destination="$install_dir/Software/app.py"  # Adjust this path as needed
 
-
 # Define colors for pretty output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
-
-# Define and open a logfile
-LOGFILE="/var/log/xbeeserver_install.log"
-exec 1>>$LOGFILE 2>&1
 
 # Enhanced logging function
 log_message() {
@@ -69,7 +64,6 @@ show_usage() {
     echo "Usage: $0 [OPTIONS]"
     echo "Options:"
     echo "  -d <dir>       Set the installation directory"
-    echo "  -n             Bypass root check"
     echo "  -s             Silent mode"
     echo "  -f             Skip UFW SSH rule"
     echo "  -uninstall     Uninstall the software"
@@ -259,14 +253,6 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-
-
-# Root check
-if [ "$no_root_check" -eq 0 ] && [ "$(id -u)" != "0" ]; then
-    echo "This script must be run as root. Please use sudo."
-    exit 1
-fi
-
 # Validate installation path
 validate_install_path
 
@@ -313,10 +299,6 @@ source "$install_dir/Software/env/bin/activate"
 info_message "Installing required Python packages including Flask..."
 pip install requests pyftdi flask || { error_message "Package installation failed, exiting."; exit 1; }
 
-# Systemd service file creation
-info_message "Creating a systemd service file for the XBee Server API..."
-APP_LOGFILE="/var/log/XBeeServerAPI.log"
-
 # Modify the systemd service file creation section
 cat <<EOF | sudo tee $SERVICE_FILE
 [Unit]
@@ -324,7 +306,7 @@ Description=XBee Server API Service
 After=network.target
 
 [Service]
-ExecStart=/bin/sh -c '$install_dir/Software/env/bin/python $install_dir/Software/app.py >> $APP_LOGFILE 2>&1'
+ExecStart=$install_dir/Software/env/bin/python $install_dir/Software/app.py
 Restart=on-failure
 RestartSec=2
 StartLimitIntervalSec=0
@@ -335,10 +317,6 @@ Environment=PATH=$install_dir/Software/env/bin
 [Install]
 WantedBy=multi-user.target
 EOF
-
-# Ensure that the user has write permissions to the log file
-sudo touch $APP_LOGFILE
-sudo chown $USER $APP_LOGFILE
 
 # Systemd manager configuration reload
 info_message "Reloading the systemd manager configuration..."
