@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default values for command-line arguments
-install_dir="/opt"
+install_dir="/home/$USER/XBeeServerAPI"
 no_root_check=0  # Flag for bypassing root check
 silent_mode=0    # Flag for silent mode
 skip_ufw_ssh=0   # Flag for skipping UFW SSH rule
@@ -219,12 +219,6 @@ trap cleanup SIGINT SIGTERM
 
 # Check for required dependencies
 check_dependencies
-
-# Parse command-line arguments
-if [ $# -eq 0 ]; then
-    show_usage
-    exit 1
-fi
 
 while [ $# -gt 0 ]; do
     case "$1" in
