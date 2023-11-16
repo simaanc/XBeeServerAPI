@@ -139,6 +139,13 @@ uninstall() {
         sudo rm "$SERVICE_FILE"
     fi
 
+    # Remove the udev rules
+    local UDEV_RULES_PATH="/etc/udev/rules.d/11-ftdi.rules"
+    if [ -f "$UDEV_RULES_PATH" ]; then
+        echo "Removing the udev rules file..."
+        rudo rm "$UDEV_RULES_PATH"
+    fi
+
     # Reload systemd daemon
     sudo systemctl daemon-reload
 
@@ -149,12 +156,6 @@ uninstall() {
     # Check if UFW is active and reload it
     if sudo ufw status | grep -qw "active"; then
         sudo ufw reload || { error_message "Failed to reload UFW, please check manually."; }
-    fi
-
-    # Remove installation directory
-    if [ -d "$install_dir/Software" ]; then
-        echo "Removing installed software directory..."
-        sudo rm -rf "$install_dir/Software"
     fi
 
     # Remove log files
