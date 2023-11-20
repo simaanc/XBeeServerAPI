@@ -39,6 +39,7 @@ interval = 100  # How often to send a message
 # Start the transmit/receive loop
 print("Sending pot data every {} second".format(interval / 1000))
 
+# set voltage reference for sampling
 xbee.atcmd('AV', 2)
 
 while True:
