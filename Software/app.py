@@ -5,6 +5,7 @@ import configparser
 import threading
 import os
 import queue
+import time
 from pathlib import Path
 
 from flask import Flask, request, render_template, jsonify
@@ -53,20 +54,29 @@ def validate_checksum(data):
 
 
 def serial_reader():
+    # Standard byte offset for Zigbee/DigiMesh packet
+    standard_offset = 3
+    #Standard byte offset for Zigbee/DigiMesh Checksum
+    checksum_offset = 1
+    #minimum packet size with one byte of data (for 0x90 packet)
+    min_packet_size = 17
+    #byte of start delimiter
+    delimiter = b"\x7E"
+
     buffer = b""  # Buffer to hold incoming data
 
     while True:
         try:
-            # Read incoming data
-            new_data = port.read(6)
-
+            # Read incoming data one byte at a time
+            new_data = port.read(1)
             if not new_data:
+                time.sleep(0.5) #wait half a second for new data
                 continue
             buffer += new_data
 
             while buffer:
                 # Find the index of the next start delimiter
-                start_idx = buffer.find(b"\x7E")
+                start_idx = buffer.find(delimiter)
 
                 if start_idx == -1:
                     buffer = b""  # Discard incomplete packets
@@ -74,8 +84,8 @@ def serial_reader():
                 if start_idx > 0:
                     buffer = buffer[start_idx:]
 
-                # Check if there's enough data for MSB, LSB, and checksum
-                if len(buffer) < 5:  # Minimum length for MSB, LSB, and checksum
+                # Check and see if this packet meets its minimum size with one byte of data
+                if len(buffer) < min_packet_size: 
                     break
 
                 # Extract MSB and LSB to calculate packet length
@@ -84,14 +94,16 @@ def serial_reader():
                 packet_length = (msb << 8) | lsb
 
                 # Check if there's enough data for the complete packet
+                total_packet_size = packet_length + standard_offset + checksum_offset
                 if (
-                    len(buffer) < packet_length + 4
-                ):  # 4 bytes for MSB, LSB, and checksum
+                    len(buffer) < total_packet_size
+                ):
                     break
 
                 # Extract and process the complete packet
-                complete_packet = buffer[: packet_length + 4]
-                buffer = buffer[packet_length + 4 :]
+                end_packet_idx = total_packet_size + 1
+                complete_packet = buffer[:end_packet_idx]
+                buffer = buffer[end_packet_idx:] # buffer will be cleared if this is the only packet
 
                 # Extract the frame type (4th byte)
                 frame_type = complete_packet[3]
@@ -257,7 +269,7 @@ if __name__ == '__main__':
 
             # Check status code for response received (success code - 200)
             print("POST Status Code:", post_response.status_code)
-            print("POST Response Content:", post_response.content)
+            print("POST Response Content:", post_response.content, "\n")
             
         except requests.exceptions.Timeout:
             bounce_count += 1
@@ -268,7 +280,7 @@ if __name__ == '__main__':
                     post_response = requests.post(server_url, json=payload, headers=headers, timeout=5)
                     post_response.raise_for_status()
                     print("POST Status Code:", post_response.status_code)
-                    print("POST Response Content:", post_response.content)
+                    print("POST Response Content:", post_response.content, "\n")
                     bounce_count = 0
                     break
                 except requests.exceptions.Timeout:

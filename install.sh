@@ -143,7 +143,7 @@ uninstall() {
     local UDEV_RULES_PATH="/etc/udev/rules.d/11-ftdi.rules"
     if [ -f "$UDEV_RULES_PATH" ]; then
         echo "Removing the udev rules file..."
-        rudo rm "$UDEV_RULES_PATH"
+        sudo rm "$UDEV_RULES_PATH"
     fi
 
     # Reload systemd daemon
