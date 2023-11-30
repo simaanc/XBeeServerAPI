@@ -29,21 +29,27 @@ def sleep_time():
     sleep_time = xbee.atcmd('SP')
     return sleep_time * 10 # convert to milliseconds
 
-def check_for_digimesh_network():
-    print("Checking for other nodes in the network...")
-    #return the nodes in the network
-    return list(xbee.discover())
+def check_network():
+    nodes = list(xbee.discover())
+    if len(nodes) > 0:
+        print('Network found')
+        return sorted(nodes, key=lambda k: k['sender_eui64'])[0]['sender_eui64']
+    else:
+        print('No nodes found. Trying again...')
+        check_network()
 
 # __main__ excecution -------
 print("Starting Send & Sleep Cycle...")
 
 xb = xbee.XBee()
 
+xbee.atcmd('SM', 6)
 xbee.atcmd('AV', 2)
 xbee.atcmd('AC')
 
 # ensure that other nodes exist in the network
-nodes = check_for_digimesh_network()
+print("Checking for other nodes...")
+addr = check_network()
 
 # get the sleep time from the configuration
 sleep_ms = sleep_time()
@@ -52,6 +58,7 @@ print("Sleep time is", sleep_ms, "ms")
 
 while True:
     # force the device to stay awake for data send
+    start_time = time.ticks_ms()
     with xb.wake_lock:
         # get value from the sensor
         val = get_sensor_value()
@@ -59,18 +66,19 @@ while True:
         # Combine EUI64 and potentiometer value into a single message with newline delimiter
         print("\tSending", val, "\n")
         try:
-            xbee.transmit(xbee.ADDR_BROADCAST, val)  # Encode as bytes before transmission
+            xbee.transmit(addr, val)  # Encode as bytes before transmission
         except OSError as error:
             print("Connection Error! Waiting and trying again...")
-            time.sleep(3)
+            time.sleep(5)
             continue
+    end_time = time.ticks_ms()
+
+    # calculate the time taken to send the data
+    time_taken = end_time - start_time
 
     # Shhhh... go to sleep little Zigbee
-    # convert to seconds
     sleep_s = sleep_ms / 1000
     print("Sleeping for", sleep_s, "seconds...\n")
-    xb.sleep_now(sleep_ms)
+    xb.sleep_now(sleep_ms - time_taken - 100) # 100 ms for safety
     print("Awake!\n")
     time.sleep(0.1)
-
-        
