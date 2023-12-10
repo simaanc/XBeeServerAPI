@@ -92,81 +92,182 @@ def serial_reader():
                 msb = int(buffer[1:2].hex(), 16)
                 lsb = int(buffer[2:3].hex(), 16)
                 packet_length = (msb << 8) | lsb
+                total_packet_length = packet_length + standard_offset + checksum_offset
 
                 # Check if there's enough data for the complete packet
-                total_packet_size = packet_length + standard_offset + checksum_offset
                 if (
-                    len(buffer) < total_packet_size
+                    len(buffer) < total_packet_length
                 ):
                     break
 
+                print("New Packet Received")
+
                 # Extract and process the complete packet
-                end_packet_idx = total_packet_size + 1
+                end_packet_idx = total_packet_length + 1
                 complete_packet = buffer[:end_packet_idx]
                 buffer = buffer[end_packet_idx:] # buffer will be cleared if this is the only packet
 
                 # Extract the frame type (4th byte)
                 frame_type = complete_packet[3]
 
-                # Extract the 64-bit source address (next 8 bytes)
-                source_address_64 = complete_packet[4:12]
-
-                # Extract the 16-bit source network address (next 2 bytes)
-                source_address_16 = complete_packet[12:14]
-
-                # Extract the receive options (next 1 byte)
-                receive_options = complete_packet[14]
-
-                # Calculate the number of bytes for the received data
-                received_data_length = (
-                    packet_length - 12
-                )
-                
-                # Extract the received data
-                received_data = complete_packet[15 : 15 + received_data_length]
-
-                # Convert received data from hex to ASCII
-                received_data_ascii = bytes.fromhex(received_data.hex()).decode(
-                    "utf-8", errors="replace"
-                )
-                received_data_ascii = "".join(
-                    char for char in received_data_ascii if char.isascii()
-                )
-
-                # Validate the checksum
-                received_packet = complete_packet[3:]  # Exclude the start delimiter
-                is_checksum_valid = validate_checksum(received_packet)
-                if is_checksum_valid:
-                    print("Checksum is valid.")
-                else:
-                    print("Checksum is invalid. Ignoring the data.")
-                    continue
-
-                # Process the packet based on the identified frame type
-                if frame_type == 0x90:  # Receive packet
-                    print("Received Packet 90:", complete_packet.hex())
-
-                    current_time = datetime.datetime.now(datetime.timezone.utc)
-                    epoch_time = round(current_time.timestamp(), 3) * 1000
-                    # epoch_time = current_time.isoformat()
-                    
-                    # Construct JSON payload
-                    payload = {
-                        "source_address_64": str(source_address_64.hex()).upper(),
-                        "date_time": epoch_time,
-                        "data": float(received_data_ascii),
-                    }
-                    
-                    print(payload)
-                    # Put the JSON payload in a queue to be processed outside this loop
-                    json_payload_queue.put(payload)
-                elif frame_type == 0x95:  # Node identification indicator
-                    print("Received Packet 95:", complete_packet.hex())
-                else:
-                    print("Unknown frame type:", hex(frame_type))
+                if frame_type == 0x90:
+                    parse_receive_data_packet(complete_packet[3:], packet_length)
+                elif frame_type == 0x92:
+                    parse_io_sample_packet(complete_packet[3:], packet_length)
 
         except Exception as e:
             print("Exception in serial_reader:", e)
+            time.sleep(1)
+                # # Extract the 64-bit source address (next 8 bytes)
+                # source_address_64 = complete_packet[4:12]
+
+                # # Extract the 16-bit source network address (next 2 bytes)
+                # source_address_16 = complete_packet[12:14]
+
+                # # Extract the receive options (next 1 byte)
+                # receive_options = complete_packet[14]
+
+                # # Calculate the number of bytes for the received data
+                # received_data_length = (
+                #     packet_length - 12
+                # )
+                
+                # # Extract the received data
+                # received_data = complete_packet[15 : 15 + received_data_length]
+
+                # # Convert received data from hex to ASCII
+                # received_data_ascii = bytes.fromhex(received_data.hex()).decode(
+                #     "utf-8", errors="replace"
+                # )
+                # received_data_ascii = "".join(
+                #     char for char in received_data_ascii if char.isascii()
+                # )
+
+                # # Validate the checksum
+                # received_packet = complete_packet[3:]  # Exclude the start delimiter
+                # is_checksum_valid = validate_checksum(received_packet)
+                # if is_checksum_valid:
+                #     print("Checksum is valid.")
+                # else:
+                #     print("Checksum is invalid. Ignoring the data.")
+                #     continue
+
+                # # Process the packet based on the identified frame type
+                # if frame_type == 0x90:  # Receive packet
+                #     print("Received Packet 90:", complete_packet.hex())
+
+                #     current_time = datetime.datetime.now(datetime.timezone.utc)
+                #     epoch_time = round(current_time.timestamp(), 3) * 1000
+                #     # epoch_time = current_time.isoformat()
+                    
+                #     # Construct JSON payload
+                #     payload = {
+                #         "source_address_64": str(source_address_64.hex()).upper(),
+                #         "date_time": epoch_time,
+                #         "data": float(received_data_ascii),
+                #     }
+                    
+                #     print(payload)
+                #     # Put the JSON payload in a queue to be processed outside this loop
+                #     json_payload_queue.put(payload)
+                # elif frame_type == 0x95:  # Node identification indicator
+                #     print("Received Packet 95:", complete_packet.hex())
+                # else:
+                #     print("Unknown frame type:", hex(frame_type))
+
+# Parse an 0x90 packet, past the delimiter, length, and frame type bytes
+def parse_receive_data_packet(packet, length):
+    print("Received Packet 0x90:", packet.hex())
+    # Extract the 64-bit source address (next 8 bytes)
+    source_address_64 = packet[1:9]
+
+    # Extract the 16-bit source network address (next 2 bytes)
+    source_address_16 = packet[9:11]
+
+    # Extract the receive options (next 1 byte)
+    receive_options = packet[11]
+
+    # Calculate the number of bytes for the received data
+    received_data_length = (
+        length - 12
+    )
+
+    # Extract the received data
+    received_data = packet[12 : 12 + received_data_length]
+
+    # Convert received data from hex to ASCII
+    received_data_ascii = bytes.fromhex(received_data.hex()).decode(
+        "utf-8", errors="replace"
+    )
+    received_data_ascii = "".join(
+        char for char in received_data_ascii if char.isascii()
+    )
+
+    # Validate the checksum
+    checksum_valid = validate_checksum(packet)
+    if checksum_valid:
+        print("Checksum is valid.")
+        add_json_payload(str(source_address_64.hex()).upper(), float(received_data_ascii))
+    else:
+        print("Checksum is invalid. Ignoring the data.")
+
+# Parse an 0x92 packet, past the delimiter, length, and frame type bytes
+def parse_io_sample_packet(packet, length):
+    print("Received Packet 0x92:", packet.hex())
+    # reference voltage of 2.5 volts
+    voltage_ref = 2.5
+    c_factor = 1023
+
+    # extract the 64 bit source address
+    source_address_64 = packet[1:9]
+
+    # Extract the 8 bit receive options
+    receive_options = packet[11]
+
+    # Extrack the number of sample, and check that it is 1
+    num_samples = packet[12]
+    if num_samples != 0x01:
+        print("Packet contains more than one sample! Aborting")
+        return;
+
+    #Extract the 16 bit digital sample mask, and check that it is 0
+    digital_sample_mask = packet[13:15]
+    if int(digital_sample_mask.hex(), 16) > 0:
+        print("Unsupported Digital Sample Provided! Aborting")
+        return
+
+    #Extract the 8 bit analog sample mask
+    analog_sample_mask = packet[15]
+
+    #Extract the 16 bit sample value
+    sample_value = packet[16:18]
+    act_sample_value = (int(sample_value.hex(), 16) / c_factor) * voltage_ref
+
+    # Validate the checksum
+    checksum_valid = validate_checksum(packet)
+    if checksum_valid:
+        print("Checksum is valid.")
+        add_json_payload(str(source_address_64.hex()).upper(), act_sample_value)
+    else:
+        print("Checksum is invalid. Ignoring the data.")
+
+
+# add json payload to the queue
+def add_json_payload(source_address_64, data):
+    current_time = datetime.datetime.now(datetime.timezone.utc)
+    epoch_time = round(current_time.timestamp(), 3) * 1000
+    
+    # Construct JSON payload
+    payload = {
+        "source_address_64": source_address_64,
+        "date_time": epoch_time,
+        "data": data,
+    }
+
+    print(payload)
+
+    json_payload_queue.put(payload)
+
 
 
 # Create a thread-safe queue for JSON payloads
