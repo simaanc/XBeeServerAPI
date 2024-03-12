@@ -15,6 +15,8 @@ source_path = Path(__file__).resolve()
 source_dir = source_path.parent
 config = configparser.ConfigParser()
 configLocation = str(source_dir) + "/configfile.ini"
+main_route = "/api/v1/sensors"
+test_route = "/api/v1/sensor-hubs/test-connection"
 
 app = Flask(__name__)
 
@@ -32,7 +34,7 @@ if not os.path.exists(configLocation):
         "server_url": "https://example.com",
         "api_key": "your_api_key_here",
         "serial_port_url": "ftdi://ftdi:232:/1",
-        "baud_rate": "115200",
+        "baud_rate": "115200"
     }
     write_file()
 else:
@@ -51,6 +53,16 @@ def validate_checksum(data):
     )  # Exclude the last byte (received checksum)
     received_checksum = data[-1]
     return calculated_checksum == received_checksum
+
+def get_server_urls(url_string, route):
+    def strip_and_add_route(s):
+        return s.strip() + route
+
+    return list(map(strip_and_add_route, url_string.split(',')))
+
+#get the api keys from comma separated list
+def get_api_keys(api_string):
+    return list(map(str.strip, api_string.split(',')))
 
 
 def serial_reader():
@@ -286,7 +298,7 @@ def index():
         config["ServerConf"]["api_key"] = request.form["api_key"]
         write_file()  # Save the updated configuration to the file
         return "Configuration updated successfully."
-
+    
     # Render the configuration form
     return render_template(
         "index.html",
@@ -302,39 +314,68 @@ def check_auth_connection():
         data = request.get_json()
 
         # Extract the server URL and API key
-        server_url = data.get("server_url")
-        api_key = data.get("api_key")
+        server_urls = get_server_urls(data.get("server_url"), test_route)
+        api_keys = get_api_keys(data.get("api_key"))
 
         payload = {}  # Include the API key in the payload
 
-        headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-        }
+        result = {} # store final result
 
-        # Check if both server URL and API key are provided
-        if server_url and api_key:
-            try:
-                # Make a POST request to the receive server's auth_check route
-                auth_check_url = server_url + "/api/v1/sensor-hubs/test-connection"
-                response = requests.post(auth_check_url, json=payload, headers=headers)
+        for i in range(len(server_urls)):
+            current_server_url = server_urls[i]
+            current_api_key = api_keys[i] if len(api_keys) > 1 else api_keys[0]
 
-                print("POST Status Code:", response.status_code)
+            headers = {
+                    "Authorization": f"Bearer {current_api_key}",
+                    "Content-Type": "application/json",
+            }
+            # Check if both server URL and API key are provided
+            if current_server_url and current_api_key:
+                try:
+                    # Make a POST request to the receive server's auth_check route
+                    response = requests.post(current_server_url, json=payload, headers=headers)
 
-                if response.status_code == 200:
-                    result = {"message": "Authorization and Connection are OK!"}
-                else:
-                    result = {"message": "Authorization or Connection failed."}
-            except requests.exceptions.RequestException as e:
-                # Handle exceptions raised by requests.post
-                result = {"message": "Authorization or Connection failed"}
-        else:
-            result = {"message": "Missing server URL or API key."}
+                    print("POST Status Code:", response.status_code)
+
+                    if response.status_code == 200:
+                        result = {"message": 'Authorization and Connection are OK!'.format(idx=i+1)}
+                    else:
+                        result = {"message": 'URL #{idx}: Authorization or Connection failed.'.format(idx=i+1)}
+
+                except requests.exceptions.RequestException as e:
+                    # Handle exceptions raised by requests.post
+                    result = {"message": 'URL #{idx}: Authorization or Connection failed.'.format(idx=i+1)}
+            else:
+                result = {"message": 'URL #{idx}: Missing server URL or API key.'.format(idx=i+1)}
 
         return jsonify(result)
 
     except Exception as e:
         return jsonify({"error": str(e)})
+
+
+def retry_query_loop(server_url, payload, headers):
+    bounce_count += 1
+    print("POST request timed out. Number of Tries:", bounce_count)
+    print('Trying again...')
+    while bounce_count < 6:
+        try:
+            post_response = requests.post(server_url, json=payload, headers=headers, timeout=5)
+            post_response.raise_for_status()
+            print("POST Status Code:", post_response.status_code)
+            print("POST Response Content:", post_response.content, "\n")
+            bounce_count = 0
+            break
+        except requests.exceptions.Timeout:
+            bounce_count += 1
+            print("POST request timed out. Number of Tries:", bounce_count)
+            print('Trying again...')
+        except Exception as e:
+            print("Exception in main loop:", e)
+    else:
+        bounce_count = 0
+        print('POST request failed after 5 tries. Trying Next URL OR Next Packet...')
+        return
 
 if __name__ == '__main__':
 
@@ -348,53 +389,39 @@ if __name__ == '__main__':
     #track the number of times a request bounces back
     bounce_count = 0
 
+    # get the server urls and strip the whilespace
+
     # Main loop to process JSON payloads and make POST requests
     while True:
         try:
-            
             payload = json_payload_queue.get(timeout=1)
             json_payload_queue.task_done()
 
-            server_url = config["ServerConf"]["server_url"] + "/api/v1/sensors"
-            api_key = config["ServerConf"]["api_key"]
+            server_urls = get_server_urls(config["ServerConf"]["server_url"], main_route)
+            api_keys = get_api_keys(config["ServerConf"]["api_key"])
 
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            }
+            for i in range(len(server_urls)):
+                current_server_url = server_urls[i]
 
-            # send the request with a timeout of 5 seconds
-            post_response = requests.post(server_url, json=payload, headers=headers, timeout=5)
-            
-            bounce_count = 0 #reset the bounce counter
+                # if only one api key is given, use it
+                current_api_key = api_keys[i] if len(api_keys) > 1 else api_keys[0]
+                headers = {
+                    "Authorization": f"Bearer {current_api_key}",
+                    "Content-Type": "application/json",
+                }
 
-            # Check status code for response received (success code - 200)
-            print("POST Status Code:", post_response.status_code)
-            print("POST Response Content:", post_response.content, "\n")
-            
-        except requests.exceptions.Timeout:
-            bounce_count += 1
-            print("POST request timed out. Number of Tries:", bounce_count)
-            print('Trying again...')
-            while bounce_count < 6:
-                try:
-                    post_response = requests.post(server_url, json=payload, headers=headers, timeout=5)
-                    post_response.raise_for_status()
+                try: 
+                    # send the request with a timeout of 5 seconds
+                    post_response = requests.post(current_server_url, json=payload, headers=headers, timeout=5)
+                    
+                    bounce_count = 0 #reset the bounce counter
+
+                    # Check status code for response received (success code - 200)
                     print("POST Status Code:", post_response.status_code)
                     print("POST Response Content:", post_response.content, "\n")
-                    bounce_count = 0
-                    break
                 except requests.exceptions.Timeout:
-                    bounce_count += 1
-                    print("POST request timed out. Number of Tries:", bounce_count)
-                    print('Trying again...')
-                except Exception as e:
-                    print("Exception in main loop:", e)
-            else:
-                bounce_count = 0
-                print('POST request failed after 5 tries. Trying Next Packet...')
-                continue
-
+                    retry_query_loop(current_server_url, payload, headers)
+                    
         except queue.Empty:
             pass  # No new payloads to process
 

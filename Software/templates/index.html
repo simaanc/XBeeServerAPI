@@ -71,10 +71,10 @@
     <h1>Configuration Page</h1>
     <div class="container">
         <form method="POST">
-            <label for="server_url">Server URL:</label>
+            <label for="server_url" id="server_url_label">Server URL(s):</label>
             <input type="text" id="server_url" name="server_url" value="{{ server_url }}" required>
             
-            <label for="api_key">API Key:</label>
+            <label for="api_key" id="api_key_label">API Key(s):</label>
             <input type="text" id="api_key" name="api_key" value="{{ api_key }}" required>
             
             <!-- Use a button element instead of input type submit -->
