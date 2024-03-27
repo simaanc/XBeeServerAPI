@@ -406,7 +406,7 @@ if __name__ == '__main__':
                 # if only one api key is given, use it
                 current_api_key = api_keys[i] if len(api_keys) > 1 else api_keys[0]
                 headers = {
-                    "Authorization": f"Bearer {current_api_key}",
+                    "Authorization": f"{current_api_key}",
                     "Content-Type": "application/json",
                 }
 
