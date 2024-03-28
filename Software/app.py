@@ -17,6 +17,7 @@ config = configparser.ConfigParser()
 configLocation = str(source_dir) + "/configfile.ini"
 main_route = "/api/v1/sensors"
 test_route = "/api/v1/sensor-hubs/test-connection"
+xptrack_name = "xptrack"
 
 app = Flask(__name__)
 
@@ -56,7 +57,10 @@ def validate_checksum(data):
 
 def get_server_urls(url_string, route):
     def strip_and_add_route(s):
-        return s.strip() + route
+        if xptrack_name in s:
+            return s.strip() + route
+        else:
+            return s.strip()
 
     return list(map(strip_and_add_route, url_string.split(',')))
 
@@ -295,7 +299,7 @@ def index():
     if request.method == "POST":
         # Update the configuration with values from the form
         config["ServerConf"]["server_url"] = request.form["server_url"]
-        config["ServerConf"]["api_key"] = request.form["api_key"]
+        config["ServerConf"]["api_key"] = request.form["api_key"].replace("%", "%%")
         write_file()  # Save the updated configuration to the file
         return "Configuration updated successfully."
     
@@ -326,7 +330,7 @@ def check_auth_connection():
             current_api_key = api_keys[i] if len(api_keys) > 1 else api_keys[0]
 
             headers = {
-                    "Authorization": f"Bearer {current_api_key}",
+                    "Authorization": f"{current_api_key}",
                     "Content-Type": "application/json",
             }
             # Check if both server URL and API key are provided
@@ -337,8 +341,8 @@ def check_auth_connection():
 
                     print("POST Status Code:", response.status_code)
 
-                    if response.status_code == 200:
-                        result = {"message": 'Authorization and Connection are OK!'.format(idx=i+1)}
+                    if response.status_code == 200 or response.status_code == 204:
+                        result = {"message": 'URL #{idx}: Authorization and Connection are OK!'.format(idx=i+1)}
                     else:
                         result = {"message": 'URL #{idx}: Authorization or Connection failed.'.format(idx=i+1)}
 
