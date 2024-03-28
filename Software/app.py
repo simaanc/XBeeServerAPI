@@ -332,6 +332,7 @@ def check_auth_connection():
             headers = {
                     "Authorization": f"{current_api_key}",
                     "Content-Type": "application/json",
+                    "Content-Encoding": "utf-8"
             }
             # Check if both server URL and API key are provided
             if current_server_url and current_api_key:
@@ -412,6 +413,7 @@ if __name__ == '__main__':
                 headers = {
                     "Authorization": f"{current_api_key}",
                     "Content-Type": "application/json",
+                    "Content-Encoding": "utf-8"
                 }
 
                 try: 
