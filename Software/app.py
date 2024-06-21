@@ -10,6 +10,9 @@ from pathlib import Path
 
 from flask import Flask, request, render_template, jsonify
 
+#LHP Added Imports
+import subprocess
+
 # Paths and configuration
 source_path = Path(__file__).resolve()
 source_dir = source_path.parent
@@ -393,15 +396,118 @@ if __name__ == '__main__':
     
     #track the number of times a request bounces back
     bounce_count = 0
+    
+    #DETERMINE WHETHER THE LHP PYTHON SCRIPT NEEDS TO BE RUN
+    
+    #Flag to tell whether the config file existed
+    LHPFileExisted = False
+    #Flag to tell if the device has been initialized
+    LHPAlreadyInitialized = False
+    
+    #filePath = '/home/lhp/Documents'
+    filePath = str(source_dir)
+    
+    # Check if the file exists
+    if not os.path.isfile(filePath + '/config.txt'):
+        print("Error: The file 'config.txt' does not exist.")
+        LHPFileExisted = False
+        
+        # Check if the error file exists
+        if not os.path.isfile(filePath + '/error.txt'):
+            # Open the error file in append mode
+            with open(filePath +  '/error.txt', 'a') as file:
+                file.write('Created new config file because it did not exist')
+        
+    else:
+        #Read contents of config file
+        with open(filePath + '/config.txt', 'r') as file:
+            lines = file.readlines()
 
-    # get the server urls and strip the whilespace
+        #Check if the config file was empty
+        if(len(lines) == 0):
+            print("Error: The file 'config.txt' did not have data.")
+            LHPFileExisted = False            
+            
+            # Check if the error file exists
+            if not os.path.isfile(filePath + '/error.txt'):
+                # Open the error file in append mode
+                with open(filePath +  '/error.txt', 'a') as file:
+                    file.write('config.txt was empty')
+                
+        #If there was data in the file, read the lines
+        else:
+            # Go through the lines and assign variables
+            for line in lines:
+                if line.startswith(('PROVISIONING_HOST')):
+                    provisioning_host = line.strip().split('=', 1)[1]
+                elif line.startswith(('PROVISIONING_IDSCOPE')):
+                    id_scope = line.strip().split('=', 1)[1]
+                elif line.startswith(('PROVISIONING_SYMMETRIC_KEY')):
+                    symmetric_key = line.strip().split('=', 1)[1]
 
+                elif line.startswith(('CUSTOMER_ID')):
+                    customerId = line.strip().split('=', 1)[1]
+                    
+                elif line.startswith(('DERIVED_DEVICE_KEY')):
+                    derivedDeviceKey = line.strip().split('=', 1)[1]
+                    LHPAlreadyInitialized = True
+                elif line.startswith(('IOT_HUB_NAME')):
+                    IOTHubName = line.strip().split('=', 1)[1]
+                    LHPAlreadyInitialized = True
+                    
+            #If the device hasn't been initialized, 
+            if(LHPAlreadyInitialized == False):
+                #If the device hasn't been registered, run the startup script                        
+                print("Device not registered, running startup script")
+                
+                # Check if the startup script exists
+                if not os.path.isfile(filePath + '/IoT_Hub_Registration.py'):
+                    print("Error: The file 'IoT_Hub_Registration.py' does not exist.")
+                    
+                    # Check if the error file exists
+                    if not os.path.isfile(filePath + '/error.txt'):
+                        # Open the error file in append mode
+                        with open(filePath +  '/error.txt', 'a') as file:
+                            file.write('IoT_Hub_Registration.py did not exist')
+                else:
+                    #Launch Python Script
+                    print("Launching python script")
+                    
+                    # Start the script and wait for it to finish
+                    subprocess.call([filePath + '/env/bin/python', filePath + '/IoT_Hub_Registration.py'])
+                    
+                    print("Startup script finished.")
+                    
+                    #Get the server url for xbee configuration
+                    #Read contents of config file
+                    with open(filePath + '/config.txt', 'r') as file:
+                        # Go through the lines and assign variables
+                        for line in file.readlines():                            
+                            if line.startswith(('AZURE_SERVER_URL')):
+                                AzureServerURL = line.strip().split('=', 1)[1]
+                            elif line.startswith(('DERIVED_DEVICE_KEY')):
+                                derivedDeviceKey = line.strip().split('=', 1)[1]
+                            elif line.startswith(('IOT_HUB_NAME')):
+                                IOTHubName = line.strip().split('=', 1)[1]
+                            elif line.startswith(('SAS_TOKEN')):
+                                sas_token = line.strip().split('=', 1)[1]
+                    
+                    config["ServerConf"]["server_url"] += "," + AzureServerURL
+                    config["ServerConf"]["api_key"] += "," + str(sas_token).replace("%", "%%")
+                    write_file()  # Save the updated configuration to the file
+                    print("Configuration updated successfully.")
+            
+            #Device was already initialized, continue as normal    
+            else:
+                print("Device is registered. Continuing.")
+               
     # Main loop to process JSON payloads and make POST requests
     while True:
         try:
             payload = json_payload_queue.get(timeout=1)
             json_payload_queue.task_done()
 
+            # get the server urls and strip the whitespace
             server_urls = get_server_urls(config["ServerConf"]["server_url"], main_route)
             api_keys = get_api_keys(config["ServerConf"]["api_key"])
 
@@ -410,6 +516,20 @@ if __name__ == '__main__':
 
                 # if only one api key is given, use it
                 current_api_key = api_keys[i] if len(api_keys) > 1 else api_keys[0]
+                
+                #If the API URL is an IoT Hub URL, run special code
+                if('iothub' in current_server_url):
+                    print("\n\nThis URL is an Azure IoT Hub URL.\n")
+                    print("Device is registered, adding modified property")
+                    
+                    if(customerId):
+                        payload['properties'] = {'customer_id': str(customerId)}
+                    else:
+                        print("Error, customer_id field wasn't found")
+                                                                             
+                                        
+                #If the API URL is the Tellaris API, continue as normal                    
+                #else:
                 headers = {
                     "Authorization": f"{current_api_key}",
                     "Content-Type": "application/json",

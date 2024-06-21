@@ -1,3 +1,11 @@
 requests
 pyftdi
 flask
+azure
+janus
+packaging
+paho
+requests_unixsocket
+socks
+deprecation
+typing-extensions
