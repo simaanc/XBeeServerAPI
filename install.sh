@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default values for command-line arguments
-install_dir="/home/$USER/XBeeServerAPI"
+install_dir="/home/lhp/XBeeServerAPI"
 no_root_check=0  # Flag for bypassing root check
 silent_mode=0    # Flag for silent mode
 skip_ufw_ssh=0   # Flag for skipping UFW SSH rule
@@ -299,7 +299,7 @@ source "$install_dir/Software/env/bin/activate"
 
 # Python packages installation
 info_message "Installing required Python packages including Flask..."
-pip install requests pyftdi flask azure-iot-device janus packaging paho requests_unixsocket socks deprecation typing-extensions || { error_message "Package installation failed, exiting."; exit 1; }
+pip install requests pyftdi flask azure-iot-device janus packaging paho-mqtt requests-unixsocket PySocks deprecation typing-extensions || { error_message "Package installation failed, exiting."; exit 1; }
 
 # Modify the systemd service file creation section
 cat <<EOF | sudo tee $service_file
