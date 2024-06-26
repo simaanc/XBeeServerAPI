@@ -10,7 +10,9 @@ def iothub_cloudtodevice_method_sample_run():
     # Paths and configuration
     source_path = Path(__file__).resolve()
     source_dir = source_path.parent    
-    filePath = str(source_dir)   
+    filePath = str(source_dir)
+    
+    alreadyInitialized = False
     
     try:
         
