@@ -447,6 +447,8 @@ if __name__ == '__main__':
 
                 elif line.startswith(('CUSTOMER_ID')):
                     customerId = line.strip().split('=', 1)[1]
+                elif line.startswith(('nELEMENT_ID')):
+                    elementId = line.strip().split('=', 1)[1]
                     
                 elif line.startswith(('DERIVED_DEVICE_KEY')):
                     derivedDeviceKey = line.strip().split('=', 1)[1]
@@ -526,6 +528,10 @@ if __name__ == '__main__':
                         payload['properties'] = {'customer_id': str(customerId)}
                     else:
                         print("Error, customer_id field wasn't found")
+                    if(elementId):
+                        payload['properties'] = {'element_id': str(elementId)}
+                    else:
+                        print("Error, element_id field wasn't found")
                                                                              
                                         
                 #If the API URL is the Tellaris API, continue as normal                    

@@ -39,10 +39,7 @@ async def main():
     
     # Paths and configuration
     source_path = Path(__file__).resolve()
-    source_dir = source_path.parent
-    
-    # need to find a way to not hardcode this
-    #filePath = '/home/lhp/Documents'
+    source_dir = source_path.parent    
     filePath = str(source_dir)
     
     # Check if the file exists
@@ -182,8 +179,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-    # If using Python 3.6 use the following code instead of asyncio.run(main()):
-    # loop = asyncio.get_event_loop()
-    # loop.run_until_complete(main())
-    # loop.close()

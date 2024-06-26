@@ -308,7 +308,7 @@ Description=XBee Server API Service
 After=network.target
 
 [Service]
-ExecStart=$install_dir/Software/env/bin/python $install_dir/Software/app.py
+ExecStart=/bin/bash -c '$install_dir/Software/env/bin/python $install_dir/Software/app.py & $install_dir/Software/env/bin/python $install_dir/Software/cloud_to_device_listener.py'
 Restart=on-failure
 RestartSec=2
 StartLimitIntervalSec=0
