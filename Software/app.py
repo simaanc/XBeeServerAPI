@@ -300,6 +300,12 @@ serial_thread.start()
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
+        # Check if the current values are the ones you want to remove
+        if config["ServerConf"]["server_url"] == "https://example.com":
+            config["ServerConf"]["server_url"] = ""
+        if config["ServerConf"]["api_key"] == "your_api_key_here":
+            config["ServerConf"]["api_key"] = ""
+        
         # Update the configuration with values from the form
         config["ServerConf"]["server_url"] = request.form["server_url"]
         config["ServerConf"]["api_key"] = request.form["api_key"].replace("%", "%%")
@@ -493,9 +499,18 @@ if __name__ == '__main__':
                                 IOTHubName = line.strip().split('=', 1)[1]
                             elif line.startswith(('SAS_TOKEN')):
                                 sas_token = line.strip().split('=', 1)[1]
+                    # Check if the current values are the ones you want to remove
+                    if config["ServerConf"]["server_url"] == "https://example.com":
+                        config["ServerConf"]["server_url"] = AzureServerURL
+                    else:
+                        config["ServerConf"]["server_url"] += "," + AzureServerURL
+                        
+                    if config["ServerConf"]["api_key"] == "your_api_key_here":
+                        config["ServerConf"]["api_key"] = str(sas_token).replace("%", "%%")
+                    else:
+                        config["ServerConf"]["api_key"] += "," + str(sas_token).replace("%", "%%")
+                        
                     
-                    config["ServerConf"]["server_url"] += "," + AzureServerURL
-                    config["ServerConf"]["api_key"] += "," + str(sas_token).replace("%", "%%")
                     write_file()  # Save the updated configuration to the file
                     print("Configuration updated successfully.")
             
@@ -524,11 +539,11 @@ if __name__ == '__main__':
                     print("\n\nThis URL is an Azure IoT Hub URL.\n")
                     print("Device is registered, adding modified property")
                     
-                    if(customerId):
+                    if('customerId' in globals()):
                         payload['properties'] = {'customer_id': str(customerId)}
                     else:
                         print("Error, customer_id field wasn't found")
-                    if(elementId):
+                    if('elementId' in globals()):
                         payload['properties'] = {'element_id': str(elementId)}
                     else:
                         print("Error, element_id field wasn't found")
