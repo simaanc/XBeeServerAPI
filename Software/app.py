@@ -453,7 +453,7 @@ if __name__ == '__main__':
 
                 elif line.startswith(('CUSTOMER_ID')):
                     customerId = line.strip().split('=', 1)[1]
-                elif line.startswith(('nELEMENT_ID')):
+                elif line.startswith(('ELEMENT_ID')):
                     elementId = line.strip().split('=', 1)[1]
                     
                 elif line.startswith(('DERIVED_DEVICE_KEY')):
