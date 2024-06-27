@@ -7,6 +7,8 @@ silent_mode=0    # Flag for silent mode
 skip_ufw_ssh=0   # Flag for skipping UFW SSH rule
 service_name="xbeeserver.service"  # Service name
 service_file="/etc/systemd/system/$service_name"
+service_name_2="lhpcloudtodevice.service"  # Service name
+service_file_2="/etc/systemd/system/$service_name_2"
 
 # Determine the destination path for app.py based on install_dir
 app_destination="$install_dir/Software/app.py"  # Adjust this path as needed
@@ -43,8 +45,9 @@ info_message() {
 
 # Function to update app.py and restart the service
 update_app_and_restart_service() {
-    info_message "Stopping the service: $service_name..."
+    info_message "Stopping the services: $service_name... and $service_name_2"
     sudo systemctl stop "$service_name" || { error_message "Failed to stop $service_name"; exit 1; }
+    sudo systemctl stop "$service_name_2" || { error_message "Failed to stop $service_name_2"; exit 1; }
 
     info_message "Updating app.py..."
     if [ -f "$install_dir/Software/app.py" ]; then
@@ -54,10 +57,11 @@ update_app_and_restart_service() {
         exit 1
     fi
 
-    info_message "Restarting the service: $service_name..."
+    info_message "Restarting the service: $service_name... and $service_name_2"
     sudo systemctl start "$service_name" || { error_message "Failed to start $service_name"; exit 1; }
+    sudo systemctl start "$service_name_2" || { error_message "Failed to start $service_name_2"; exit 1; }
 
-    success_message "app.py updated and service restarted successfully."
+    success_message "app.py updated and services restarted successfully."
     exit 0
 }
 
@@ -124,19 +128,37 @@ uninstall() {
 
     echo "Starting uninstallation process..."
 
+    # Service 1
+
     # Stop the service
     echo "Stopping the service: $service_name..."
-    sudo systemctl stop "$service_name" 2>/dev/null
-
+    sudo systemctl stop "$service_name" 2>/dev/null    
+    
     # Disable the service
     echo "Disabling the service: $service_name..."
-    sudo systemctl disable "$service_name" 2>/dev/null
-
+    sudo systemctl disable "$service_name" 2>/dev/null    
+    
     # Remove the systemd service file
     local SERVICE_FILE="/etc/systemd/system/$service_name"
     if [ -f "$SERVICE_FILE" ]; then
         echo "Removing the systemd service file..."
         sudo rm "$SERVICE_FILE"
+    fi
+    
+    # Service 2
+    # Stop the service
+    echo "Stopping the service: $service_name_2..."
+    sudo systemctl stop "$service_name_2" 2>/dev/null
+    
+    # Disable the service
+    echo "Disabling the service: $service_name_2..."
+    sudo systemctl disable "$service_name_2" 2>/dev/null
+    
+    # Remove the systemd service file
+    local SERVICE_FILE_2="/etc/systemd/system/$service_name_2"
+    if [ -f "$SERVICE_FILE_2" ]; then
+        echo "Removing the systemd service file..."
+        sudo rm "$SERVICE_FILE_2"
     fi
 
     # Remove the udev rules
@@ -301,6 +323,8 @@ source "$install_dir/Software/env/bin/activate"
 info_message "Installing required Python packages including Flask..."
 pip install requests pyftdi flask azure-iot-device janus packaging paho-mqtt requests-unixsocket PySocks deprecation typing-extensions || { error_message "Package installation failed, exiting."; exit 1; }
 
+# Service File 1
+
 # Modify the systemd service file creation section
 cat <<EOF | sudo tee $service_file
 [Unit]
@@ -308,7 +332,7 @@ Description=XBee Server API Service
 After=network.target
 
 [Service]
-ExecStart=/bin/bash -c '$install_dir/Software/env/bin/python $install_dir/Software/app.py & $install_dir/Software/env/bin/python $install_dir/Software/cloud_to_device_listener.py'
+ExecStart=$install_dir/Software/env/bin/python $install_dir/Software/app.py
 Restart=on-failure
 RestartSec=2
 StartLimitIntervalSec=0
@@ -328,6 +352,35 @@ sudo systemctl daemon-reload || { error_message "Failed to reload systemd, exiti
 info_message "Enabling the XBee Server API service to start on boot..."
 sudo systemctl enable xbeeserver.service || { error_message "Failed to enable service, exiting."; exit 1; }
 
+# Service File 2
+
+# Modify the systemd service file creation section
+cat <<EOF | sudo tee $service_file_2
+[Unit]
+Description=LHP Cloud To Device Service
+After=network.target
+
+[Service]
+ExecStart=$install_dir/Software/env/bin/python $install_dir/Software/env/bin/python $install_dir/Software/cloud_to_device_listener.py
+Restart=on-failure
+RestartSec=2
+StartLimitIntervalSec=0
+User=$USER
+WorkingDirectory=$install_dir/Software/
+Environment=PATH=$install_dir/Software/env/bin
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Systemd manager configuration reload
+info_message "Reloading the systemd manager configuration..."
+sudo systemctl daemon-reload || { error_message "Failed to reload systemd, exiting."; exit 1; }
+
+# Enabling the service to start on boot
+info_message "Enabling the XBee Server API service to start on boot..."
+sudo systemctl enable lhpcloudtodevice.service || { error_message "Failed to enable service, exiting."; exit 1; }
+
 # Configure UFW
 if [ "$skip_ufw_ssh" -eq 0 ]; then
     info_message "Configuring UFW - allowing SSH..."
@@ -344,15 +397,19 @@ sudo ufw enable || { error_message "Failed to enable UFW, exiting."; exit 1; }
 info_message "Starting the XBee Server API service..."
 sudo systemctl start xbeeserver.service || { error_message "Failed to start service, check status."; sudo systemctl status xbeeserver.service; exit 1; }
 
+# Starting the Cloud To Device service
+info_message "Starting the Cloud To Device service..."
+sudo systemctl start lhpcloudtodevice.service || { error_message "Failed to start service, check status."; sudo systemctl status lhpcloudtodevice.service; exit 1; }
+
 # Displaying configuration URL
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 success_message "The XBee Server API service is now running."
 info_message "You can configure the application by visiting the following URL: http://${IP_ADDRESS}:5001"
 
 # Control instructions
-info_message "To stop the XBee Server API service, run: sudo systemctl stop xbeeserver.service"
-info_message "To start the XBee Server API service, run: sudo systemctl start xbeeserver.service"
-info_message "To restart the XBee Server API service, run: sudo systemctl restart xbeeserver.service"
-info_message "If you need to check the service status, run: sudo systemctl status xbeeserver.service"
+info_message "To stop the XBee Server API service, run: sudo systemctl stop xbeeserver.service and sudo systemctl stop lhpcloudtodevice.service"
+info_message "To start the XBee Server API service, run: sudo systemctl start xbeeserver.service and sudo systemctl start lhpcloudtodevice.service"
+info_message "To restart the XBee Server API service, run: sudo systemctl restart xbeeserver.service and sudo systemctl restart lhpcloudtodevice.service"
+info_message "If you need to check the service status, run: sudo systemctl status xbeeserver.service and sudo systemctl status lhpcloudtodevice.service"
 
 success_message "Installation and service creation for the XBee Server API is complete!"
