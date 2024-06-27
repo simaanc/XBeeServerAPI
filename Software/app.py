@@ -539,12 +539,18 @@ if __name__ == '__main__':
                     print("\n\nThis URL is an Azure IoT Hub URL.\n")
                     print("Device is registered, adding modified property")
                     
-                    if('customerId' in globals()):
-                        payload['properties'] = {'customer_id': str(customerId)}
+                    # Initialize properties as an empty dictionary
+                    payload['properties'] = {}
+
+                    if 'customerId' in globals():
+                        # Add customer_id to properties
+                        payload['properties']['customer_id'] = str(customerId)
                     else:
                         print("Error, customer_id field wasn't found")
-                    if('elementId' in globals()):
-                        payload['properties'] = {'element_id': str(elementId)}
+
+                    if 'elementId' in globals():
+                        # Add element_id to properties
+                        payload['properties']['element_id'] = str(elementId)
                     else:
                         print("Error, element_id field wasn't found")
                                                                              
