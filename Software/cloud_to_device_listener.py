@@ -3,6 +3,7 @@ from azure.iot.device import IoTHubDeviceClient
 import os
 from pathlib import Path
 import uuid
+import time
 
 RECEIVED_MESSAGES = 0
 
@@ -15,6 +16,7 @@ def iothub_cloudtodevice_method_sample_run():
     alreadyInitialized = False
     
     try:
+        time.sleep(30)
         
         # Check if the file exists
         if not os.path.isfile(filePath + '/config.txt'):
@@ -76,6 +78,8 @@ def iothub_cloudtodevice_method_sample_run():
                     
                     # Instantiate the client
                     client = IoTHubDeviceClient.create_from_connection_string(CONNECTION_STRING)
+                    
+                    time.sleep(1)
 
                     print ("Waiting for C2D messages, press Ctrl-C to exit")
                     try:
@@ -83,7 +87,9 @@ def iothub_cloudtodevice_method_sample_run():
                         client.on_message_received = message_handler
 
                         while True:
-                            time.sleep(1000)
+                            time.sleep(60)
+                    except Exception as ex:
+                        print("Unexpected error {0}".format(ex))
                     except KeyboardInterrupt:
                         print("IoT Hub C2D Messaging device sample stopped")
                     finally:
