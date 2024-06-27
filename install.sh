@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default values for command-line arguments
-install_dir="/home/$USER/XBeeServerAPI"
+install_dir="/home/lhp/XBeeServerAPI"
 no_root_check=0  # Flag for bypassing root check
 silent_mode=0    # Flag for silent mode
 skip_ufw_ssh=0   # Flag for skipping UFW SSH rule
@@ -361,7 +361,7 @@ Description=LHP Cloud To Device Service
 After=network.target
 
 [Service]
-ExecStart=$install_dir/Software/env/bin/python $install_dir/Software/env/bin/python $install_dir/Software/cloud_to_device_listener.py
+ExecStart=$install_dir/Software/env/bin/python $install_dir/Software/cloud_to_device_listener.py
 Restart=on-failure
 RestartSec=2
 StartLimitIntervalSec=0
