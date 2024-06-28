@@ -316,7 +316,7 @@ sudo usermod -a -G plugdev $USER || { error_message "Failed to add user to plugd
 
 # Virtual environment creation
 info_message "Creating a virtual environment for the XBee Server API..."
-sudo python3 -m venv "$install_dir/Software/env" || { error_message "Virtual environment creation failed, exiting."; exit 1; }
+python3 -m venv "$install_dir/Software/env" || { error_message "Virtual environment creation failed, exiting."; exit 1; }
 source "$install_dir/Software/env/bin/activate"
 
 # Python packages installation
