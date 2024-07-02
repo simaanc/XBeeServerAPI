@@ -12,6 +12,9 @@ from flask import Flask, request, render_template, jsonify
 
 #LHP Added Imports
 import subprocess
+import sqlite3
+import json
+import uuid
 
 # Paths and configuration
 source_path = Path(__file__).resolve()
@@ -453,8 +456,9 @@ if __name__ == '__main__':
 
                 elif line.startswith(('CUSTOMER_ID')):
                     customerId = line.strip().split('=', 1)[1]
-                elif line.startswith(('ELEMENT_ID')):
-                    elementId = line.strip().split('=', 1)[1]
+                
+                elif line.startswith(('AUTH_TOKEN')):
+                    authToken = line.strip().split('=', 1)[1]
                     
                 elif line.startswith(('DERIVED_DEVICE_KEY')):
                     derivedDeviceKey = line.strip().split('=', 1)[1]
@@ -539,6 +543,88 @@ if __name__ == '__main__':
                     print("\n\nThis URL is an Azure IoT Hub URL.\n")
                     print("Device is registered, adding modified property")
                     
+                    # Compare source_address_64 against list of known source_address_64
+                    # Connect to SQLite database (or create it if it doesn't exist)
+                    dbConnection = sqlite3.connect(filePath + '/lhp_db.db')
+                    cursor = dbConnection.cursor()
+                    
+                    if('authToken' in globals()):                    
+                        
+                        # Create table if it doesn't exist
+                        cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS sensor_box_table (
+                                source_address_64 TEXT,
+                                sensor_element_id TEXT,
+                                isInitialized BOOLEAN DEFAULT FALSE
+                            )
+                        ''')
+                        
+                        # Query to see if a row has matching values
+                        cursor.execute('''
+                            SELECT * FROM sensor_box_table
+                            WHERE source_address_64 = ? AND isInitialized = ?
+                        ''', (payload['source_address_64'], True))
+                        
+                        #If the source_address_64 isn't in the list, send a POST API call to the backend
+                        if cursor.fetchone() is None:                            
+                            print("Did not find sensor box in the db")
+                            
+                            # Get the MAC address
+                            mac_address = ':'.join(['{:02x}'.format((uuid.getnode() >> i) & 0xff) for i in range(0,8*6,8)][::-1])
+                            print("MAC Address: ", mac_address)
+                            
+                            # Define the URL
+                            apiUrl = "https://elem1-api.azurewebsites.net/sensor-box/create/rpi"
+
+                            # Define the headers
+                            headers = {
+                                "Content-Type": "application/json",
+                                "Authorization": "Bearer " + authToken
+                            }
+
+                            # Define the body
+                            body = {
+                                "customer_id": customerId,
+                                "install_date": payload['date_time'],
+                                "source_address_id": payload['source_address_64'],
+                                "gps": None,
+                                "sensor_id": None,
+                                "nickname": None,
+                                "iot_device_id": mac_address
+                            }
+                            
+                            try:                        
+                                # Send the POST request
+                                response = requests.post(apiUrl, headers=headers, data=json.dumps(body))
+
+                                # Wait for the response and print it
+                                print(response.json())
+                                print("POST Status Code:", str(response.status_code))
+
+                                #Once we have a confirmed post, mark the address in the dictionary as complete, if it fails, retry
+                                if response.status_code == 200 or response.status_code == 204:
+                                    print("Success sending sensor_box request. Status code: " + str(response.status_code))
+                                    
+                                    cursor.execute('''
+                                        INSERT INTO sensor_box_table (source_address_64, sensor_element_id, isInitialized)
+                                        VALUES (?, ?, ?)
+                                    ''', (payload['source_address_64'], None, True))
+
+                                    # Commit the changes and close the connection
+                                    dbConnection.commit()
+                                    
+                                else:
+                                    print("Error when sending sensor_box request. Response code: " + str(response.status_code))
+                                    if(response.status_code == 999):
+                                        print("Record already exists in database.")
+                                    
+
+                            except requests.exceptions.RequestException as e:
+                                # Handle exceptions raised by requests.post
+                                print("Error when sending sensor_box request", e)
+                        
+                        # If there is not a match, that means the sensor_box is already in the database, and nothing needs to be done
+                    
                     # Initialize properties as an empty dictionary
                     payload['properties'] = {}
 
@@ -547,13 +633,25 @@ if __name__ == '__main__':
                         payload['properties']['customer_id'] = str(customerId)
                     else:
                         print("Error, customer_id field wasn't found")
-
-                    if 'elementId' in globals():
-                        # Add element_id to properties
-                        payload['properties']['element_id'] = str(elementId)
+                        
+                    # Get the relevant element_id from the database, if it exists:
+                    # Check if a row with the matching source_address_64 exists
+                    cursor.execute("SELECT * FROM sensor_box_table WHERE source_address_64 = ?", (payload['source_address_64'],))
+                    row = cursor.fetchone()
+                    
+                    if row is not None:
+                        print("Found sensor_element_id in database")
+                        # If the row exists, check if the sensor_element_id is filled in
+                        if row[1] is not None:
+                            # Add element_id to properties
+                            payload['properties']['element_id'] = row[1]
+                        else:
+                            print("Error, element_id field wasn't found")
                     else:
-                        print("Error, element_id field wasn't found")
-                                                                             
+                        print("Error, couldn't find matching sensor box row in database")
+                    
+                    #Close the connection to the DB
+                    dbConnection.close()      
                                         
                 #If the API URL is the Tellaris API, continue as normal                    
                 #else:

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import uuid
 import time
+import sqlite3
 
 RECEIVED_MESSAGES = 0
 
@@ -53,14 +54,14 @@ def iothub_cloudtodevice_method_sample_run():
                     elif line.startswith(('PROVISIONING_SYMMETRIC_KEY')):
                         symmetric_key = line.strip().split('=', 1)[1]
                     elif line.startswith(('CUSTOMER_ID')):
-                        customerId = line.strip().split('=', 1)[1]
-
+                        customerId = line.strip().split('=', 1)[1]                        
+                        
                     elif line.startswith(('DERIVED_DEVICE_KEY')):
                         derivedDeviceKey = line.strip().split('=', 1)[1]
                         alreadyInitialized = True
                     elif line.startswith(('IOT_HUB_NAME')):
                         IOTHubName = line.strip().split('=', 1)[1]
-                        alreadyInitialized = True                    
+                        alreadyInitialized = True
                     elif line.startswith(('SAS_TOKEN')):
                         sas_token = line.strip().split('=', 1)[1]
                         alreadyInitialized = True
@@ -109,11 +110,7 @@ def message_handler(message):
     global RECEIVED_MESSAGES
     RECEIVED_MESSAGES += 1
     print("")
-    print("Message received:")
-
-    # print data from both system and application (custom) properties
-    #for property in vars(message).items():
-        #print ("    {}".format(property))        
+    print("Message received:")  
     
     # Get message data and decode it
     message_data = message.data.decode('utf-8')
@@ -121,37 +118,55 @@ def message_handler(message):
 
     # Check if message data contains "New Element ID: "
     if "NEW_ELEMENT_ID" in message_data:
-        # Extract the element ID
-        element_id = message_data.split("NEW_ELEMENT_ID:")[1]
+        # Extract the sensor box ID and element ID
+        sensor_box_id = message_data.split("SENSOR_BOX_ID:")[1].split("#")[0].strip()
+        print("SENSOR_BOX_ID: {}".format(sensor_box_id))
+        
+        element_id = message_data.split("NEW_ELEMENT_ID:")[1].strip()
         print("NEW_ELEMENT_ID: {}".format(element_id))
         
-        if(element_id):
-            print("Writing new Element_Id to the config file")
+        if(sensor_box_id and element_id):
+            print("Writing new element_id to the database")
             # Paths and configuration
             source_path = Path(__file__).resolve()
             source_dir = source_path.parent    
             filePath = str(source_dir)
-                            
-            # Read the file
-            with open(filePath + '/config.txt', 'r') as file:
-                lines = file.readlines()
-
-            #Flag to check whether the element id was overwritten
-            fileContainsElementId = False
-
-            # Replace the "ELEMENT_ID" line if it exists
-            for i, line in enumerate(lines):
-                if line.startswith("ELEMENT_ID"):
-                    fileContainsElementId = True
-                    lines[i] = 'ELEMENT_ID=' + str(element_id) + '\n'
             
-            #If the ELEMENT_ID line wasn't there, add it to the end of the file
-            if(fileContainsElementId == False):
-                lines.append('\nELEMENT_ID=' + str(element_id) + '\n')                
+            # Check if the database exists
+            if os.path.exists(filePath + '/lhp_db.db'):
+                # Connect to the SQLite database
+                dbConnection = sqlite3.connect(filePath + '/lhp_db.db')
+                cursor = dbConnection.cursor()
                 
-            # Write the file
-            with open(filePath + '/config.txt', 'w') as file:
-                file.writelines(lines)
+                # Create table if it doesn't exist
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS sensor_box_table (
+                        source_address_64 TEXT,
+                        sensor_element_id TEXT,
+                        isInitialized BOOLEAN DEFAULT FALSE
+                    )
+                ''')
+
+                # Check if a row with the matching source_address_64 exists
+                cursor.execute("SELECT * FROM sensor_box_table WHERE source_address_64 = ?", (sensor_box_id,))
+                row = cursor.fetchone()
+                
+                if row is not None:
+                    # If the row exists, check if the sensor_element_id is filled in
+                    if row[0] is not None:
+                        # If it is, overwrite the value
+                        cursor.execute("UPDATE sensor_box_table SET sensor_element_id = ? WHERE source_address_64 = ?", (element_id, sensor_box_id))
+                    else:
+                        # If it's not, assign its value
+                        cursor.execute("INSERT INTO sensor_box_table (sensor_element_id) VALUES (?) WHERE source_address_64 = ?", (element_id, sensor_box_id))
+
+                    # Commit the changes and close the connection
+                    dbConnection.commit()
+                    dbConnection.close()
+
+                    print(f"The sensor_element_id for the source_address_64 {sensor_box_id} has been updated to {element_id} in the database.")
+                else:
+                    print(f"No row with the source_address_64 {sensor_box_id} exists in the database.")            
 
     print("Total calls received: {}".format(RECEIVED_MESSAGES))
 
