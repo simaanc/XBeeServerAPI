@@ -165,8 +165,61 @@ def message_handler(message):
                     dbConnection.close()
 
                     print(f"The sensor_element_id for the source_address_64 {sensor_box_id} has been updated to {element_id} in the database.")
+                    
                 else:
-                    print(f"No row with the source_address_64 {sensor_box_id} exists in the database.")            
+                    print(f"No row with the source_address_64 {sensor_box_id} exists in the database.")
+
+    if "DELETE_ELEMENT_ID" in message_data:
+        
+        print("Deleting element_id from the database")
+        
+        # Extract the sensor box ID and element ID
+        sensor_box_id = message_data.split("SENSOR_BOX_ID:")[1].split("#")[0].strip()
+        print("SENSOR_BOX_ID: {}".format(sensor_box_id))
+        
+        if(sensor_box_id):
+            # Paths and configuration
+            source_path = Path(__file__).resolve()
+            source_dir = source_path.parent    
+            filePath = str(source_dir)
+            
+            # Check if the database exists
+            if os.path.exists(filePath + '/lhp_db.db'):
+                # Connect to the SQLite database
+                dbConnection = sqlite3.connect(filePath + '/lhp_db.db')
+                cursor = dbConnection.cursor()
+                
+                # Create table if it doesn't exist
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS sensor_box_table (
+                        source_address_64 TEXT,
+                        sensor_element_id TEXT,
+                        isInitialized BOOLEAN DEFAULT FALSE
+                    )
+                ''')
+
+                # Check if a row with the matching source_address_64 exists
+                cursor.execute("SELECT * FROM sensor_box_table WHERE source_address_64 = ?", (sensor_box_id,))
+                row = cursor.fetchone()
+                
+                if row is not None:
+                    print("Found the row!")
+                    # If the row exists, check if the sensor_element_id is filled in
+                    if row[0] is not None:
+                        # If it is, overwrite the value
+                        cursor.execute("UPDATE sensor_box_table SET sensor_element_id = NULL WHERE source_address_64 = ?", (sensor_box_id,))
+                    else:
+                        # If it's not, assign its value
+                        cursor.execute("INSERT INTO sensor_box_table (sensor_element_id) VALUES (NULL) WHERE source_address_64 = ?", (sensor_box_id,))
+
+                    # Commit the changes and close the connection
+                    dbConnection.commit()
+                    dbConnection.close()
+
+                    print(f"The sensor_element_id for the source_address_64 {sensor_box_id} has been updated to NULL in the database.")
+                                
+                else:
+                    print(f"No row with the source_address_64 {sensor_box_id} exists in the database.")
 
     print("Total calls received: {}".format(RECEIVED_MESSAGES))
 
