@@ -13,7 +13,7 @@ import time
 import urllib
 from pathlib import Path
 
-def generate_sas_token(uri, key, expiry=3600):
+def generate_sas_token(uri, key, expiry=999999999999999):
     ttl = time.time() + expiry
     sign_key = "%s\n%d" % ((urllib.parse.quote_plus(uri)), int(ttl))
     signature = base64.b64encode(hmac.HMAC(base64.b64decode(key), sign_key.encode('utf-8'), hashlib.sha256).digest())

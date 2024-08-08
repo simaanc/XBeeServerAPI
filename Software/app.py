@@ -513,7 +513,20 @@ if __name__ == '__main__':
                         config["ServerConf"]["api_key"] = str(sas_token).replace("%", "%%")
                     else:
                         config["ServerConf"]["api_key"] += "," + str(sas_token).replace("%", "%%")
-                        
+                    
+                    #Check for XPTrack Credentials
+                    new_server_url = "https://elem1.xptrack.com"
+                    new_api_key = "bbcfdcb948747b80"
+
+                    # Check if the new server URL is in the server_url
+                    if new_server_url not in config["ServerConf"]["server_url"]:
+                        # If not, add it
+                        config["ServerConf"]["server_url"] += "," + new_server_url
+
+                    # Check if the new API key is in the api_key
+                    if new_api_key not in config["ServerConf"]["api_key"]:
+                        # If not, add it
+                        config["ServerConf"]["api_key"] += "," + new_api_key
                     
                     write_file()  # Save the updated configuration to the file
                     print("Configuration updated successfully.")
