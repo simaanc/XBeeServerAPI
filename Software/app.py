@@ -503,30 +503,31 @@ if __name__ == '__main__':
                                 IOTHubName = line.strip().split('=', 1)[1]
                             elif line.startswith(('SAS_TOKEN')):
                                 sas_token = line.strip().split('=', 1)[1]
-                    # Check if the current values are the ones you want to remove
-                    if config["ServerConf"]["server_url"] == "https://example.com":
-                        config["ServerConf"]["server_url"] = AzureServerURL
-                    else:
-                        config["ServerConf"]["server_url"] += "," + AzureServerURL
-                        
-                    if config["ServerConf"]["api_key"] == "your_api_key_here":
-                        config["ServerConf"]["api_key"] = str(sas_token).replace("%", "%%")
-                    else:
-                        config["ServerConf"]["api_key"] += "," + str(sas_token).replace("%", "%%")
                     
                     #Check for XPTrack Credentials
                     new_server_url = "https://elem1.xptrack.com"
                     new_api_key = "bbcfdcb948747b80"
+                    
+                    # Check if the current values are the ones you want to remove
+                    if config["ServerConf"]["server_url"] == "https://example.com":                        
+                        config["ServerConf"]["server_url"] = str(AzureServerURL) + "," + str(new_server_url)
+                    else:
+                        config["ServerConf"]["server_url"] += "," + str(AzureServerURL)
+                        
+                    if config["ServerConf"]["api_key"] == "your_api_key_here":
+                        config["ServerConf"]["api_key"] = str(sas_token).replace("%", "%%") + "," + str(new_api_key)
+                    else:
+                        config["ServerConf"]["api_key"] += "," + str(sas_token).replace("%", "%%")                    
 
-                    # Check if the new server URL is in the server_url
-                    if new_server_url not in config["ServerConf"]["server_url"]:
-                        # If not, add it
-                        config["ServerConf"]["server_url"] += "," + new_server_url
+                    # # Check if the new server URL is in the server_url
+                    # if new_server_url not in config["ServerConf"]["server_url"]:
+                    #     # If not, add it
+                    #     config["ServerConf"]["server_url"] += "," + str(new_server_url)
 
-                    # Check if the new API key is in the api_key
-                    if new_api_key not in config["ServerConf"]["api_key"]:
-                        # If not, add it
-                        config["ServerConf"]["api_key"] += "," + new_api_key
+                    # # Check if the new API key is in the api_key
+                    # if new_api_key not in config["ServerConf"]["api_key"]:
+                    #     # If not, add it
+                    #     config["ServerConf"]["api_key"] += "," + str(new_api_key).replace("%", "%%")
                     
                     write_file()  # Save the updated configuration to the file
                     print("Configuration updated successfully.")
@@ -630,6 +631,14 @@ if __name__ == '__main__':
                                     print("Error when sending sensor_box request. Response code: " + str(response.status_code))
                                     if(response.status_code == 999):
                                         print("Record already exists in database.")
+                                        
+                                        cursor.execute('''
+                                            INSERT INTO sensor_box_table (source_address_64, sensor_element_id, isInitialized)
+                                            VALUES (?, ?, ?)
+                                        ''', (payload['source_address_64'], None, True))
+
+                                        # Commit the changes and close the connection
+                                        dbConnection.commit()
                                     
 
                             except requests.exceptions.RequestException as e:
